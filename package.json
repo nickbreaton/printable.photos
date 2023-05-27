@@ -40,6 +40,10 @@
   "dependencies": {
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
+    "maxrects-packer": "^2.7.3",
     "styled-vanilla-extract": "^0.5.4"
+  },
+  "prettier": {
+    "printWidth": 120
   }
 }
