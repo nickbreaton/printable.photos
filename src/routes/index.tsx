@@ -26,8 +26,8 @@ const mockValues = {
 
 const Page = component$(({ width, values, offscreen }: { width: string, values: typeof mockValues, offscreen?: Signal<HTMLElement> }) => {
   const offscreenStyle = {
-    left: `calc(${-values.page.width} * var(--inch))`,
-    top: `-100%`,
+    left: `-200vmax`,
+    top: `-200vmax`,
     position: 'absolute',
     pointerEvents: 'none'
   }
@@ -38,11 +38,10 @@ const Page = component$(({ width, values, offscreen }: { width: string, values: 
   return <div
     {...(offscreen ? offscreenAttributes : {})}
     style={{
-      '--inch': `calc(${width} / ${values.page.width})`,
       display: 'inline-block',
-      width: `calc(${values.page.width} * var(--inch))`,
+      width,
       aspectRatio: `${values.page.width} / ${values.page.height}`,
-      padding: `calc(${values.page.padding} * var(--inch))`,
+      // padding: `calc(${values.page.padding} / ${values.page.width} * 100%)`,
       background: 'white',
       minHeight: 0,
       ...(offscreen ? offscreenStyle : {})
@@ -70,7 +69,7 @@ export default component$(() => {
       }}>Download</button>
 
       <div>
-        <Page width='max(80%, 500px)' values={mockValues} />
+        <Page width='80%' values={mockValues} />
         <Page width='8.5in' values={mockValues} offscreen={content} />
       </div>
     </>
