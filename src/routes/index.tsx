@@ -2,7 +2,7 @@ import { component$, useComputed$, useSignal, useVisibleTask$ } from "@builder.i
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { Signal } from "@builder.io/qwik";
-import { MaxRectsPacker, Rectangle } from "maxrects-packer";
+import { MaxRectsPacker, PACKING_LOGIC, Rectangle } from "maxrects-packer";
 
 const mockValues = {
   page: {
@@ -21,15 +21,40 @@ const mockValues = {
       width: 4,
       height: 4,
     },
-    // {
-    //   src: "/photo2.png?a",
-    //   width: 0.25,
-    //   height: 0.25,
-    // },
+    {
+      src: "/photo2.png?a",
+      width: 0.25,
+      height: 0.25,
+    },
+    {
+      src: "/photo2.png?b",
+      width: 2,
+      height: 2,
+    },
+    {
+      src: "/photo2.png?c",
+      width: 2,
+      height: 2,
+    },
+    {
+      src: "/photo2.png?d",
+      width: 3,
+      height: 3,
+    },
+    {
+      src: "/photo2.png?e",
+      width: 2,
+      height: 2,
+    },
+    {
+      src: "/photo.png?a",
+      width: 7,
+      height: 7,
+    },
   ],
 };
 
-const Page = component$(
+const Document = component$(
   ({ width, values, offscreen }: { width: string; values: typeof mockValues; offscreen?: Signal<HTMLElement> }) => {
     const offscreenStyle = {
       left: `-200vmax`,
@@ -46,7 +71,7 @@ const Page = component$(
     const bins = useComputed$(() => {
       const packer = new MaxRectsPacker(values.page.width, values.page.height, 0.25, {
         allowRotation: true,
-        smart: false, // why doesn't smart work?
+        smart: false,
         border: 0.5,
       });
       packer.addArray(
@@ -74,36 +99,41 @@ const Page = component$(
       console.log(bins.value);
     });
 
-    return (
-      <div
-        {...(offscreen ? offscreenAttributes : {})}
-        style={{
-          display: "inline-block",
-          width,
-          aspectRatio: `${values.page.width} / ${values.page.height}`,
-          background: "white",
-          minHeight: 0,
-          position: "relative",
-          ...(offscreen ? offscreenStyle : {}),
-        }}
-      >
-        {bins.value[0].rects.map((rect) => {
-          return (
-            <img
-              key={rect.data.src}
-              src={rect.data.src}
-              style={{
-                position: "absolute",
-                left: `calc(${rect.x} / ${values.page.width} * 100%)`,
-                marginTop: `calc(${rect.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
-                width: `calc(${rect.width} / ${values.page.width} * 100%)`,
-                aspectRatio: `${rect.width} / ${rect.height}`,
-              }}
-            />
-          );
-        })}
-      </div>
-    );
+    return bins.value.map((bin, index) => {
+      return (
+        <div
+          {...(offscreen ? offscreenAttributes : {})}
+          key={index}
+          style={{
+            display: "inline-block",
+            width,
+            aspectRatio: `${values.page.width} / ${values.page.height}`,
+            background: "white",
+            minHeight: 0,
+            position: "relative",
+            ...(offscreen ? offscreenStyle : {}),
+          }}
+        >
+          {/* TODO: add more pages */}
+          {bin.rects.map((rect) => {
+            return (
+              // eslint-disable-next-line qwik/jsx-img
+              <img
+                key={rect.data.src}
+                src={rect.data.src}
+                style={{
+                  position: "absolute",
+                  left: `calc(${rect.x} / ${values.page.width} * 100%)`,
+                  marginTop: `calc(${rect.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
+                  width: `calc(${rect.width} / ${values.page.width} * 100%)`,
+                  aspectRatio: `${rect.width} / ${rect.height}`,
+                }}
+              />
+            );
+          })}
+        </div>
+      );
+    });
   }
 );
 
@@ -131,8 +161,8 @@ export default component$(() => {
       </button>
 
       <div>
-        <Page width="80%" values={mockValues} />
-        <Page width="8.5in" values={mockValues} offscreen={content} />
+        <Document width="80%" values={mockValues} />
+        <Document width="8.5in" values={mockValues} offscreen={content} />
       </div>
     </>
   );
