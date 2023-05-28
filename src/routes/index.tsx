@@ -71,7 +71,7 @@ type OnscreenDocumentProps = {
 type DocumentProps = BaseDocumentProps & (OffscreenDocumentProps | OnscreenDocumentProps);
 
 const Document = component$(({ width, values, ...props }: DocumentProps) => {
-  const offscreenStyle = {
+  const offscreenPageStyle = {
     left: `-200vmax`,
     top: `-200vmax`,
     position: "absolute",
@@ -110,7 +110,17 @@ const Document = component$(({ width, values, ...props }: DocumentProps) => {
   });
 
   return (
-    <>
+    <div
+      style={{
+        width,
+        margin: "auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: "25px", // TODO: use inches
+        marginBottom: "25px",
+        marginTop: "25px",
+      }}
+    >
       {bins.value.map((bin, index) => {
         return (
           <div
@@ -118,12 +128,12 @@ const Document = component$(({ width, values, ...props }: DocumentProps) => {
             key={bin.rects.map((rect) => rect.data.src).join()}
             style={{
               display: "inline-block",
-              width,
+              width: "100%",
               aspectRatio: `${values.page.width} / ${values.page.height}`,
               background: "white",
               minHeight: 0,
               position: "relative",
-              ...(props.type === "offscreen" ? offscreenStyle : {}),
+              ...(props.type === "offscreen" ? offscreenPageStyle : {}),
             }}
             ref={(page) => {
               if (props.type === "offscreen") {
@@ -150,7 +160,7 @@ const Document = component$(({ width, values, ...props }: DocumentProps) => {
           </div>
         );
       })}
-    </>
+    </div>
   );
 });
 
@@ -166,7 +176,6 @@ export default component$(() => {
   return (
     <>
       <button
-        style="margin-bottom: 1rem;"
         onClick$={async () => {
           const doc = new jsPDF({
             unit: "in",
