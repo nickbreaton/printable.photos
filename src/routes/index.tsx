@@ -57,31 +57,12 @@ const mockValues = {
 type BaseDocumentProps = {
   width: string;
   values: typeof mockValues;
-};
-
-type OffscreenDocumentProps = {
-  type: "offscreen";
   pages: Signal<HTMLElement[]>;
 };
 
-type OnscreenDocumentProps = {
-  type: "onscreen";
-};
-
-type DocumentProps = BaseDocumentProps & (OffscreenDocumentProps | OnscreenDocumentProps);
+type DocumentProps = BaseDocumentProps;
 
 const Document = component$(({ width, values, ...props }: DocumentProps) => {
-  const offscreenPageStyle = {
-    left: `-200vmax`,
-    top: `-200vmax`,
-    position: "absolute",
-    pointerEvents: "none",
-  };
-
-  const offscreenAttributes = {
-    "aria-hidden": true,
-  };
-
   const bins = useComputed$(() => {
     const packer = new MaxRectsPacker(values.page.width, values.page.height, 0.25, {
       allowRotation: true,
@@ -124,7 +105,6 @@ const Document = component$(({ width, values, ...props }: DocumentProps) => {
       {bins.value.map((bin, index) => {
         return (
           <div
-            {...(props.type === "offscreen" ? offscreenAttributes : {})}
             key={bin.rects.map((rect) => rect.data.src).join()}
             style={{
               display: "inline-block",
@@ -133,12 +113,9 @@ const Document = component$(({ width, values, ...props }: DocumentProps) => {
               background: "white",
               minHeight: 0,
               position: "relative",
-              ...(props.type === "offscreen" ? offscreenPageStyle : {}),
             }}
             ref={(page) => {
-              if (props.type === "offscreen") {
-                props.pages.value[index] = page as HTMLElement;
-              }
+              props.pages.value[index] = page as HTMLElement;
             }}
           >
             {bin.rects.map((rect) => {
@@ -196,8 +173,7 @@ export default component$(() => {
 
       {values.value && (
         <div>
-          <Document type="onscreen" width="80%" values={mockValues} />
-          <Document type="offscreen" width="8.5in" values={mockValues} pages={pages} />
+          <Document width="80%" values={mockValues} pages={pages} />
         </div>
       )}
     </>
