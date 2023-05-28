@@ -2,7 +2,7 @@ import { component$, useComputed$, useSignal, useVisibleTask$ } from "@builder.i
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { Signal } from "@builder.io/qwik";
-import { MaxRectsPacker, PACKING_LOGIC, Rectangle } from "maxrects-packer";
+import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 
 const mockValues = {
   page: {
@@ -55,14 +55,13 @@ const mockValues = {
 };
 
 type BaseDocumentProps = {
-  width: string;
   values: typeof mockValues;
   pages: Signal<HTMLElement[]>;
 };
 
 type DocumentProps = BaseDocumentProps;
 
-const Document = component$(({ width, values, ...props }: DocumentProps) => {
+const Document = component$(({ values, ...props }: DocumentProps) => {
   const bins = useComputed$(() => {
     const packer = new MaxRectsPacker(values.page.width, values.page.height, 0.25, {
       allowRotation: true,
@@ -93,8 +92,7 @@ const Document = component$(({ width, values, ...props }: DocumentProps) => {
   return (
     <div
       style={{
-        width,
-        margin: "auto",
+        width: "100%",
         display: "flex",
         flexDirection: "column",
         gap: "25px", // TODO: use inches
@@ -172,8 +170,8 @@ export default component$(() => {
       </button>
 
       {values.value && (
-        <div>
-          <Document width="80%" values={mockValues} pages={pages} />
+        <div style={{ width: "70%", margin: "auto", maxWidth: "80vh", minWidth: "500px" }}>
+          <Document values={mockValues} pages={pages} />
         </div>
       )}
     </>
