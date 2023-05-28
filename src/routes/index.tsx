@@ -81,7 +81,7 @@ function useImageSheets(config: Config) {
     );
     return packer.bins.map((bin) => {
       return {
-        imageBounds: bin.rects.map((rect) => ({
+        imageLayouts: bin.rects.map((rect) => ({
           width: rect.width,
           height: rect.height,
           x: rect.x,
@@ -106,10 +106,10 @@ const Document = component$(({ values, imageSheets, ...props }: DocumentProps) =
         marginTop: "25px",
       }}
     >
-      {imageSheets.map(({ imageBounds }, index) => {
+      {imageSheets.map(({ imageLayouts }, index) => {
         return (
           <div
-            key={imageBounds.map((rect) => rect.src).join()}
+            key={imageLayouts.map((imageLayout) => imageLayout.src).join()}
             style={{
               display: "inline-block",
               width: "100%",
@@ -122,18 +122,18 @@ const Document = component$(({ values, imageSheets, ...props }: DocumentProps) =
               props.pages.value[index] = page as HTMLElement;
             }}
           >
-            {imageBounds.map((rect) => {
+            {imageLayouts.map((imageLayout) => {
               return (
                 // eslint-disable-next-line qwik/jsx-img
                 <img
-                  key={rect.src}
-                  src={rect.src}
+                  key={imageLayout.src}
+                  src={imageLayout.src}
                   style={{
                     position: "absolute",
-                    left: `calc(${rect.x} / ${values.page.width} * 100%)`,
-                    marginTop: `calc(${rect.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
-                    width: `calc(${rect.width} / ${values.page.width} * 100%)`,
-                    aspectRatio: `${rect.width} / ${rect.height}`,
+                    left: `calc(${imageLayout.x} / ${values.page.width} * 100%)`,
+                    marginTop: `calc(${imageLayout.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
+                    width: `calc(${imageLayout.width} / ${values.page.width} * 100%)`,
+                    aspectRatio: `${imageLayout.width} / ${imageLayout.height}`,
                   }}
                 />
               );
@@ -164,7 +164,7 @@ const App = component$(({ config }: { config: Config }) => {
           imageSheets.value.forEach((sheet) => {
             doc.addPage();
 
-            sheet.imageBounds.forEach((image) => {
+            sheet.imageLayouts.forEach((image) => {
               doc.addImage(image.src, "png", image.x, image.y, image.width, image.height);
             });
           });
