@@ -1,13 +1,12 @@
-import { component$, useComputed$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import { component$, useComputed$, useSignal, useVisibleTask$, Signal } from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
-import { Signal } from "@builder.io/qwik";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 
 const mockValues = {
   page: {
     width: 8.5,
     height: 11,
+    margin: 0.25,
     padding: 0.5,
   },
   images: [
@@ -54,41 +53,48 @@ const mockValues = {
   ],
 };
 
+type Config = typeof mockValues;
+
 type BaseDocumentProps = {
   values: typeof mockValues;
   pages: Signal<HTMLElement[]>;
+  imageSheets: ImageSheet[];
 };
 
 type DocumentProps = BaseDocumentProps;
 
-const Document = component$(({ values, ...props }: DocumentProps) => {
-  const bins = useComputed$(() => {
-    const packer = new MaxRectsPacker(values.page.width, values.page.height, 0.25, {
-      allowRotation: true,
+type ImageSheet = ReturnType<typeof useImageSheets>["value"][number];
+
+function useImageSheets(config: Config) {
+  return useComputed$(() => {
+    const packer = new MaxRectsPacker(config.page.width, config.page.height, config.page.margin, {
+      allowRotation: false, // TODO: optimization
       smart: false,
-      border: 0.5,
+      border: config.page.padding,
     });
     packer.addArray(
-      values.images.map((image) => {
+      config.images.map((image) => {
         const rect = new Rectangle(image.width, image.height);
-        rect.data = image;
+        rect.data = image.src;
         return rect;
       })
     );
     return packer.bins.map((bin) => {
       return {
-        rects: bin.rects.map((rect) => ({
+        imageBounds: bin.rects.map((rect) => ({
           width: rect.width,
           height: rect.height,
           x: rect.x,
           y: rect.y,
           rotate: rect.rot,
-          data: rect.data,
+          src: rect.data,
         })),
       };
     });
   });
+}
 
+const Document = component$(({ values, imageSheets, ...props }: DocumentProps) => {
   return (
     <div
       style={{
@@ -100,10 +106,10 @@ const Document = component$(({ values, ...props }: DocumentProps) => {
         marginTop: "25px",
       }}
     >
-      {bins.value.map((bin, index) => {
+      {imageSheets.map(({ imageBounds }, index) => {
         return (
           <div
-            key={bin.rects.map((rect) => rect.data.src).join()}
+            key={imageBounds.map((rect) => rect.src).join()}
             style={{
               display: "inline-block",
               width: "100%",
@@ -116,12 +122,12 @@ const Document = component$(({ values, ...props }: DocumentProps) => {
               props.pages.value[index] = page as HTMLElement;
             }}
           >
-            {bin.rects.map((rect) => {
+            {imageBounds.map((rect) => {
               return (
                 // eslint-disable-next-line qwik/jsx-img
                 <img
-                  key={rect.data.src}
-                  src={rect.data.src}
+                  key={rect.src}
+                  src={rect.src}
                   style={{
                     position: "absolute",
                     left: `calc(${rect.x} / ${values.page.width} * 100%)`,
@@ -139,14 +145,9 @@ const Document = component$(({ values, ...props }: DocumentProps) => {
   );
 });
 
-export default component$(() => {
+const App = component$(({ config }: { config: Config }) => {
   const pages = useSignal<HTMLElement[]>([]);
-  const values = useSignal<typeof mockValues>();
-
-  useVisibleTask$(() => {
-    // simulate adding on client
-    values.value = mockValues;
-  });
+  const imageSheets = useImageSheets(config);
 
   return (
     <>
@@ -155,25 +156,39 @@ export default component$(() => {
           const doc = new jsPDF({
             unit: "in",
             orientation: "p",
-            format: [8.5, 11],
+            format: [config.page.width, config.page.height],
           });
+
           doc.deletePage(1);
-          for (const page of pages.value) {
+
+          imageSheets.value.forEach((sheet) => {
             doc.addPage();
-            const canvas = await html2canvas(page);
-            doc.addImage(canvas, 0, 0, 8.5, 11);
-          }
+
+            sheet.imageBounds.forEach((image) => {
+              doc.addImage(image.src, "png", image.x, image.y, image.width, image.height);
+            });
+          });
+
           doc.save("canvas.pdf");
         }}
       >
         Download
       </button>
 
-      {values.value && (
-        <div style={{ width: "70%", margin: "auto", maxWidth: "80vh", minWidth: "500px" }}>
-          <Document values={mockValues} pages={pages} />
-        </div>
-      )}
+      <div style={{ width: "70%", margin: "auto", maxWidth: "80vh", minWidth: "500px" }}>
+        <Document values={config} imageSheets={imageSheets.value} pages={pages} />
+      </div>
     </>
   );
+});
+
+export default component$(() => {
+  const values = useSignal<typeof mockValues>();
+
+  useVisibleTask$(() => {
+    // simulate adding on client
+    values.value = mockValues;
+  });
+
+  return values.value ? <App config={values.value} /> : null;
 });
