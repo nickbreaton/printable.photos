@@ -54,94 +54,115 @@ const mockValues = {
   ],
 };
 
-const Document = component$(
-  ({ width, values, offscreen }: { width: string; values: typeof mockValues; offscreen?: Signal<HTMLElement> }) => {
-    const offscreenStyle = {
-      left: `-200vmax`,
-      top: `-200vmax`,
-      position: "absolute",
-      pointerEvents: "none",
-    };
+type BaseDocumentProps = {
+  width: string;
+  values: typeof mockValues;
+};
 
-    const offscreenAttributes = {
-      "aria-hidden": true,
-      ref: offscreen,
-    };
+type OffscreenDocumentProps = {
+  type: "offscreen";
+  pages: Signal<HTMLElement[]>;
+};
 
-    const bins = useComputed$(() => {
-      const packer = new MaxRectsPacker(values.page.width, values.page.height, 0.25, {
-        allowRotation: true,
-        smart: false,
-        border: 0.5,
-      });
-      packer.addArray(
-        values.images.map((image) => {
-          const rect = new Rectangle(image.width, image.height);
-          rect.data = image;
-          return rect;
-        })
-      );
-      return packer.bins.map((bin) => {
-        return {
-          rects: bin.rects.map((rect) => ({
-            width: rect.width,
-            height: rect.height,
-            x: rect.x,
-            y: rect.y,
-            rotate: rect.rot,
-            data: rect.data,
-          })),
-        };
-      });
+type OnscreenDocumentProps = {
+  type: "onscreen";
+};
+
+type DocumentProps = BaseDocumentProps & (OffscreenDocumentProps | OnscreenDocumentProps);
+
+const Document = component$(({ width, values, ...props }: DocumentProps) => {
+  const offscreenStyle = {
+    left: `-200vmax`,
+    top: `-200vmax`,
+    position: "absolute",
+    pointerEvents: "none",
+  };
+
+  const offscreenAttributes = {
+    "aria-hidden": true,
+  };
+
+  const bins = useComputed$(() => {
+    const packer = new MaxRectsPacker(values.page.width, values.page.height, 0.25, {
+      allowRotation: true,
+      smart: false,
+      border: 0.5,
     });
-
-    useVisibleTask$(() => {
-      console.log(bins.value);
+    packer.addArray(
+      values.images.map((image) => {
+        const rect = new Rectangle(image.width, image.height);
+        rect.data = image;
+        return rect;
+      })
+    );
+    return packer.bins.map((bin) => {
+      return {
+        rects: bin.rects.map((rect) => ({
+          width: rect.width,
+          height: rect.height,
+          x: rect.x,
+          y: rect.y,
+          rotate: rect.rot,
+          data: rect.data,
+        })),
+      };
     });
+  });
 
-    return bins.value.map((bin, index) => {
-      return (
-        <div
-          {...(offscreen ? offscreenAttributes : {})}
-          key={index}
-          style={{
-            display: "inline-block",
-            width,
-            aspectRatio: `${values.page.width} / ${values.page.height}`,
-            background: "white",
-            minHeight: 0,
-            position: "relative",
-            ...(offscreen ? offscreenStyle : {}),
-          }}
-        >
-          {/* TODO: add more pages */}
-          {bin.rects.map((rect) => {
-            return (
-              // eslint-disable-next-line qwik/jsx-img
-              <img
-                key={rect.data.src}
-                src={rect.data.src}
-                style={{
-                  position: "absolute",
-                  left: `calc(${rect.x} / ${values.page.width} * 100%)`,
-                  marginTop: `calc(${rect.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
-                  width: `calc(${rect.width} / ${values.page.width} * 100%)`,
-                  aspectRatio: `${rect.width} / ${rect.height}`,
-                }}
-              />
-            );
-          })}
-        </div>
-      );
-    });
-  }
-);
+  return (
+    <>
+      {bins.value.map((bin, index) => {
+        return (
+          <div
+            {...(props.type === "offscreen" ? offscreenAttributes : {})}
+            key={bin.rects.map((rect) => rect.data.src).join()}
+            style={{
+              display: "inline-block",
+              width,
+              aspectRatio: `${values.page.width} / ${values.page.height}`,
+              background: "white",
+              minHeight: 0,
+              position: "relative",
+              ...(props.type === "offscreen" ? offscreenStyle : {}),
+            }}
+            ref={(page) => {
+              if (props.type === "offscreen") {
+                props.pages.value[index] = page as HTMLElement;
+              }
+            }}
+          >
+            {bin.rects.map((rect) => {
+              return (
+                // eslint-disable-next-line qwik/jsx-img
+                <img
+                  key={rect.data.src}
+                  src={rect.data.src}
+                  style={{
+                    position: "absolute",
+                    left: `calc(${rect.x} / ${values.page.width} * 100%)`,
+                    marginTop: `calc(${rect.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
+                    width: `calc(${rect.width} / ${values.page.width} * 100%)`,
+                    aspectRatio: `${rect.width} / ${rect.height}`,
+                  }}
+                />
+              );
+            })}
+          </div>
+        );
+      })}
+    </>
+  );
+});
 
 export default component$(() => {
-  const content = useSignal<HTMLDivElement>(null!);
-  // useVisibleTask$(() => {
+  const pages = useSignal<HTMLElement[]>([]);
+  const values = useSignal<typeof mockValues>();
 
-  // });
+  useVisibleTask$(() => {
+    // simulate adding on client
+    values.value = mockValues;
+  });
+
   return (
     <>
       <button
@@ -152,18 +173,24 @@ export default component$(() => {
             orientation: "p",
             format: [8.5, 11],
           });
-          const canvas = await html2canvas(content.value!);
-          doc.addImage(canvas, 0, 0, 8.5, 11);
+          doc.deletePage(1);
+          for (const page of pages.value) {
+            doc.addPage();
+            const canvas = await html2canvas(page);
+            doc.addImage(canvas, 0, 0, 8.5, 11);
+          }
           doc.save("canvas.pdf");
         }}
       >
         Download
       </button>
 
-      <div>
-        <Document width="80%" values={mockValues} />
-        <Document width="8.5in" values={mockValues} offscreen={content} />
-      </div>
+      {values.value && (
+        <div>
+          <Document type="onscreen" width="80%" values={mockValues} />
+          <Document type="offscreen" width="8.5in" values={mockValues} pages={pages} />
+        </div>
+      )}
     </>
   );
 });
