@@ -1,10 +1,7 @@
-import { component$, useComputed$, useSignal, Signal, useVisibleTask$ } from "@builder.io/qwik";
+import { component$, useComputed$, useSignal, Signal, useVisibleTask$, useStore } from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
-import LF from "localforage";
-import { extendPrototype } from "localforage-observable";
-
-const localForage = extendPrototype(LF);
+import { getConnection } from "~/utils/data";
 
 const mockValues = {
   page: {
@@ -150,15 +147,33 @@ const Document = component$(({ values, imageSheets, ...props }: DocumentProps) =
 });
 
 export default component$(() => {
-  const config = mockValues;
+  const config: Config = useStore({
+    page: {
+      width: 8.5,
+      height: 11,
+      margin: 0.25,
+      padding: 0.5,
+    },
+    images: [],
+  });
 
   const pages = useSignal<HTMLElement[]>([]);
   const imageSheets = useImageSheets(config);
-  const storedImage = useSignal<string | null>(null);
+  // const storedImages = useSignal<string[]>([]);
 
-  useVisibleTask$(() => {
-    localForage.getItem("image:1").then((image) => {
-      storedImage.value = URL.createObjectURL(image as Blob);
+  useVisibleTask$(({ cleanup }) => {
+    getConnection().then(async ({ db, subscriber }) => {
+      const read = async () => {
+        config.images = (await db.getAll("images")).map((image) => {
+          return {
+            src: URL.createObjectURL(image.blob),
+            width: 300,
+            height: 300,
+          };
+        });
+      };
+      cleanup(subscriber.subscribe(read));
+      await read();
     });
   });
 
@@ -204,16 +219,25 @@ export default component$(() => {
           <form
             preventdefault:submit
             style={{ border: "1px solid #444", padding: "20px" }}
-            onSubmit$={(event) => {
+            onSubmit$={async (event) => {
+              const { db, subscriber } = await getConnection();
               const file = new FormData(event.target as any).get("image") as File;
-              const blob = new Blob([file], { type: file.type });
-              localForage.setItem("image:1", blob);
+
+              db.add("images", {
+                id: Math.random() + "",
+                blob: new Blob([file], { type: file.type }),
+              });
+              subscriber.notify();
+
+              // localForage.setItem("image:1", blob);
             }}
           >
             <input type="file" name="image" accept="image/*" />
             <button type="submit">Upload</button>
           </form>
-          {storedImage.value && <img src={storedImage.value} alt="" width={100} height={100} />}
+          {config.images.map((image) => (
+            <img src={image.src} alt="" width={100} height={100} />
+          ))}
         </div>
       </div>
     </>
