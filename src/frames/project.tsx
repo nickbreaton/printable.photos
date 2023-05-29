@@ -1,6 +1,10 @@
-import { component$, useComputed$, useSignal, Signal } from "@builder.io/qwik";
+import { component$, useComputed$, useSignal, Signal, useVisibleTask$ } from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
+import LF from "localforage";
+import { extendPrototype } from "localforage-observable";
+
+const localForage = extendPrototype(LF);
 
 const mockValues = {
   page: {
@@ -150,6 +154,13 @@ export default component$(() => {
 
   const pages = useSignal<HTMLElement[]>([]);
   const imageSheets = useImageSheets(config);
+  const storedImage = useSignal<string | null>(null);
+
+  useVisibleTask$(() => {
+    localForage.getItem("image:1").then((image) => {
+      storedImage.value = URL.createObjectURL(image as Blob);
+    });
+  });
 
   return (
     <>
@@ -177,8 +188,33 @@ export default component$(() => {
         Download
       </button>
 
-      <div style={{ width: "70%", margin: "auto", maxWidth: "80vh", minWidth: "500px" }}>
+      <div style={{ width: "70%", margin: "auto", maxWidth: "80vh", minWidth: "500px", display: "flex" }}>
         <Document values={config} imageSheets={imageSheets.value} pages={pages} />
+        <div
+          style={{
+            width: "400px",
+            marginLeft: "30px",
+            marginTop: "30px",
+            background: "white",
+            height: "500px",
+            padding: "20px",
+          }}
+        >
+          <h2>Images</h2>
+          <form
+            preventdefault:submit
+            style={{ border: "1px solid #444", padding: "20px" }}
+            onSubmit$={(event) => {
+              const file = new FormData(event.target as any).get("image") as File;
+              const blob = new Blob([file], { type: file.type });
+              localForage.setItem("image:1", blob);
+            }}
+          >
+            <input type="file" name="image" accept="image/*" />
+            <button type="submit">Upload</button>
+          </form>
+          {storedImage.value && <img src={storedImage.value} alt="" width={100} height={100} />}
+        </div>
       </div>
     </>
   );

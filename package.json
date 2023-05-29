@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "jspdf": "^2.5.1",
+    "localforage": "^1.10.0",
     "maxrects-packer": "^2.7.3",
     "styled-vanilla-extract": "^0.5.4"
   },
