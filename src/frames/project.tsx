@@ -2,62 +2,24 @@ import { component$, useComputed$, useSignal, Signal, useVisibleTask$, useStore 
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import { getConnection } from "~/utils/data";
+import exifreader from "exifreader";
 
-const mockValues = {
+type Config = {
   page: {
-    width: 8.5,
-    height: 11,
-    margin: 0.25,
-    padding: 0.5,
-  },
-  images: [
-    {
-      src: "/photo.png",
-      width: 5,
-      height: 5,
-    },
-    {
-      src: "/photo2.png",
-      width: 4,
-      height: 4,
-    },
-    {
-      src: "/photo2.png?a",
-      width: 0.25,
-      height: 0.25,
-    },
-    {
-      src: "/photo2.png?b",
-      width: 2,
-      height: 2,
-    },
-    {
-      src: "/photo2.png?c",
-      width: 2,
-      height: 2,
-    },
-    {
-      src: "/photo2.png?d",
-      width: 3,
-      height: 3,
-    },
-    {
-      src: "/photo2.png?e",
-      width: 2,
-      height: 2,
-    },
-    {
-      src: "/photo.png?a",
-      width: 7,
-      height: 7,
-    },
-  ],
+    width: number;
+    height: number;
+    margin: number;
+    padding: number;
+  };
+  images: Array<{
+    src: string;
+    width: number;
+    height: number;
+  }>;
 };
 
-type Config = typeof mockValues;
-
 type BaseDocumentProps = {
-  values: typeof mockValues;
+  values: Config;
   pages: Signal<HTMLElement[]>;
   imageSheets: ImageSheet[];
 };
@@ -164,13 +126,20 @@ export default component$(() => {
   useVisibleTask$(({ cleanup }) => {
     getConnection().then(async ({ db, subscriber }) => {
       const read = async () => {
-        config.images = (await db.getAll("images")).map((image) => {
-          return {
-            src: URL.createObjectURL(image.blob),
-            width: 300,
-            height: 300,
-          };
-        });
+        const records = await db.getAll("images");
+        config.images = await Promise.all(
+          records.map(async (record) => {
+            const src = URL.createObjectURL(record.blob);
+            const ratio = await new Promise<number>((resolve) => {
+              const img = document.createElement("img");
+              img.onload = () => {
+                resolve(img.height / img.width);
+              };
+              img.src = src;
+            });
+            return { src, width: 3, height: ratio * 3 };
+          })
+        );
       };
       cleanup(subscriber.subscribe(read));
       await read();
@@ -189,13 +158,38 @@ export default component$(() => {
 
           doc.deletePage(1);
 
-          imageSheets.value.forEach((sheet) => {
+          for (const sheet of imageSheets.value) {
             doc.addPage();
 
-            sheet.imageLayouts.forEach((image) => {
-              doc.addImage(image.src, "png", image.x, image.y, image.width, image.height);
-            });
-          });
+            for (const image of sheet.imageLayouts) {
+              console.log(image);
+
+              // TODO: this probably is not effecient (can do blob.arrayBuffer() directly)
+              const blob = await fetch(image.src).then((res) => res.blob());
+              const data = exifreader.load(await blob.arrayBuffer());
+
+              switch (data.Orientation?.value) {
+                // TODO fill in more cases
+                // https://jdhao.github.io/2019/07/31/image_rotation_exif_info/
+                case 6:
+                  doc.addImage(
+                    image.src,
+                    blob.type,
+                    image.x,
+                    image.y - image.width,
+                    image.height,
+                    image.width,
+                    undefined,
+                    undefined,
+                    -90
+                  );
+                  break;
+                default:
+                  doc.addImage(image.src, blob.type, image.x, image.y, image.width, image.height);
+                  break;
+              }
+            }
+          }
 
           doc.save("canvas.pdf");
         }}
