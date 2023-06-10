@@ -196,7 +196,6 @@ export default component$(() => {
       >
         Download
       </button>
-
       <div style={{ width: "70%", margin: "auto", maxWidth: "80vh", minWidth: "500px", display: "flex" }}>
         <Document values={config} imageSheets={imageSheets.value} pages={pages} />
         <div
