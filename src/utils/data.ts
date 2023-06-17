@@ -31,7 +31,7 @@ export async function getConnection(): Promise<{ db: IDBPDatabase<Schema>; subsc
     upgrade(db) {
       db.createObjectStore("images", { keyPath: "id" });
     },
-  });
+  })
 
   (window as any).__connectionSubscriber ??= new ConnectionSubscriber();
 

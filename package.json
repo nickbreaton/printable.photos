@@ -6,6 +6,7 @@
   },
   "private": true,
   "scripts": {
+    "db": "vite -c src.db/vite.config.ts src.db",
     "build": "qwik build",
     "build.client": "vite build",
     "build.preview": "vite build --ssr src/entry.preview.tsx",
@@ -22,6 +23,9 @@
     "qwik": "qwik"
   },
   "devDependencies": {
+    "@babel/core": "^7.22.5",
+    "@babel/plugin-proposal-decorators": "^7.22.5",
+    "@babel/preset-typescript": "^7.22.5",
     "@builder.io/qwik": "^1.1.4",
     "@builder.io/qwik-city": "^1.1.4",
     "@types/eslint": "8.37.0",
@@ -39,6 +43,7 @@
     "typescript": "5.0.4",
     "undici": "5.22.1",
     "vite": "4.3.5",
+    "vite-plugin-babel": "^1.1.3",
     "vite-tsconfig-paths": "4.2.0",
     "vitest": "^0.31.1"
   },

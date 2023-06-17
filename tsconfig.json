@@ -16,11 +16,12 @@
     "isolatedModules": true,
     "outDir": "tmp",
     "noEmit": true,
+    "experimentalDecorators": true,
     "types": ["node", "vite/client"],
     "paths": {
       "~/*": ["./src/*"]
     }
   },
   "files": ["./.eslintrc.cjs"],
-  "include": ["src", "./*.d.ts"]
+  "include": ["src", "./*.d.ts", "src.db"]
 }
