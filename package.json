@@ -51,6 +51,7 @@
     "idb": "^7.1.1",
     "jspdf": "^2.5.1",
     "maxrects-packer": "^2.7.3",
+    "rad-event-listener": "^0.2.4",
     "styled-vanilla-extract": "^0.5.4"
   },
   "prettier": {

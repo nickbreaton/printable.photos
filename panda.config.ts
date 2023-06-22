@@ -43,6 +43,7 @@ export default defineConfig({
     extend: {
       // '_parentActive': ""
       tabChecked: "input:checked ~ &",
+      pointerDown: "&[data-pointerdown]",
     },
   },
 

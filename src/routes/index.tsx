@@ -4,6 +4,7 @@ import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import { getConnection } from "~/utils/data";
 import exifreader from "exifreader";
 import { css } from "~/panda/css";
+import { MobileTabs } from "~/components/MobileTabs";
 
 type Config = {
   page: {
@@ -252,54 +253,7 @@ export default component$(() => {
             >
               Lucy’s day at the beach
             </h1>
-            <div
-              class={css({
-                display: "flex",
-                justifyContent: "stretch",
-                bg: "gray.50",
-                borderRadius: "sm",
-                boxShadow: "inner",
-              })}
-            >
-              {/* TODO: maybe role="tab" is a better a11y role than radios */}
-              {(["Photos", "Preview"] as const).map((value, index) => (
-                <label
-                  key={value}
-                  class={css({
-                    w: "full",
-                    display: "grid",
-                    userSelect: "none",
-                  })}
-                >
-                  <input
-                    type="radio"
-                    name="view"
-                    value={value}
-                    class={css({ gridArea: "1/1", appearance: "none" })}
-                    checked={tab.value === value}
-                    onInput$={() => (tab.value = value)}
-                  />
-                  <span
-                    class={css({
-                      gridArea: "1/1",
-                      paddingBlock: "2",
-                      paddingInline: "3",
-                      w: "full",
-                      textAlign: "center",
-                      fontWeight: "medium",
-                      cursor: "pointer",
-                      _tabChecked: {
-                        boxShadow: "sm",
-                        borderRadius: "sm",
-                        bg: "white",
-                      },
-                    })}
-                  >
-                    {value}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <MobileTabs activeTab={tab} />
           </div>
         </div>
         <div class={css({ width: "xl", maxWidth: "11/12" })}>
