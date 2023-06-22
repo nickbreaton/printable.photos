@@ -79,6 +79,7 @@ const Document = component$(({ values, imageSheets, ...props }: DocumentProps) =
               background: "white",
               boxShadow: "sm",
               position: "relative",
+              pointerEvents: "none",
             })}
             style={{
               display: "inline-block",
@@ -116,6 +117,8 @@ const Document = component$(({ values, imageSheets, ...props }: DocumentProps) =
 });
 
 export default component$(() => {
+  const tab = useSignal<"Photos" | "Preview">("Preview");
+
   const config: Config = useStore({
     page: {
       width: 8.5,
@@ -259,20 +262,22 @@ export default component$(() => {
               })}
             >
               {/* TODO: maybe role="tab" is a better a11y role than radios */}
-              {["Photos", "Preview"].map((value, index) => (
+              {(["Photos", "Preview"] as const).map((value, index) => (
                 <label
                   key={value}
                   class={css({
                     w: "full",
                     display: "grid",
+                    userSelect: "none",
                   })}
                 >
                   <input
                     type="radio"
                     name="view"
-                    value={value.toLowerCase()}
+                    value={value}
                     class={css({ gridArea: "1/1", appearance: "none" })}
-                    checked={index === 0}
+                    checked={tab.value === value}
+                    onInput$={() => (tab.value = value)}
                   />
                   <span
                     class={css({
@@ -298,7 +303,7 @@ export default component$(() => {
           </div>
         </div>
         <div class={css({ width: "xl", maxWidth: "11/12" })}>
-          <Document values={config} imageSheets={imageSheets.value} pages={pages} />
+          {tab.value === "Preview" && <Document values={config} imageSheets={imageSheets.value} pages={pages} />}
           <div
             hidden={true /* TODO: show options */}
             style={{
