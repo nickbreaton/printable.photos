@@ -19,7 +19,8 @@
     "experimentalDecorators": true,
     "types": ["node", "vite/client"],
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "~/panda/*": ["./.panda/*"]
     }
   },
   "files": ["./.eslintrc.cjs"],

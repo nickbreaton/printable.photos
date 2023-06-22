@@ -4,6 +4,7 @@
 /lib-types
 /server
 /tmp
+/.panda
 
 # Development
 node_modules

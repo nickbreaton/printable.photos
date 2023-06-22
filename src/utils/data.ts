@@ -27,13 +27,17 @@ class ConnectionSubscriber {
 }
 
 export async function getConnection(): Promise<{ db: IDBPDatabase<Schema>; subscriber: ConnectionSubscriber }> {
-  (window as any).__connection ??= await openDB<Schema>("projects", 1, {
-    upgrade(db) {
-      db.createObjectStore("images", { keyPath: "id" });
-    },
-  })
+  if (!(window as any).__connection) {
+    (window as any).__connection = await openDB<Schema>("projects", 1, {
+      upgrade(db) {
+        db.createObjectStore("images", { keyPath: "id" });
+      },
+    });
+  }
 
-  (window as any).__connectionSubscriber ??= new ConnectionSubscriber();
+  if (!(window as any).__connectionSubscriber) {
+    (window as any).__connectionSubscriber = new ConnectionSubscriber();
+  }
 
   return { db: (window as any).__connection, subscriber: (window as any).__connectionSubscriber };
 }

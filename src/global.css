@@ -1,17 +1,1 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@media print {
-  @page {
-    margin: 0;
-  }
-
-  #print {
-    display: block !important;
-  }
-
-  #app {
-    display: none;
-  }
-}
+@layer reset, base, tokens, recipes, utilities;

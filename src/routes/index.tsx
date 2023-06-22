@@ -3,6 +3,8 @@ import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import { getConnection } from "~/utils/data";
 import exifreader from "exifreader";
+import { css } from "~/panda/css";
+import { center } from "~/panda/patterns";
 
 type Config = {
   page: {
@@ -64,46 +66,54 @@ const Document = component$(({ values, imageSheets, ...props }: DocumentProps) =
         width: "100%",
         display: "flex",
         flexDirection: "column",
-        gap: "25px", // TODO: use inches
         marginBottom: "25px",
         marginTop: "25px",
       }}
     >
-      {imageSheets.map(({ imageLayouts }, index) => {
-        return (
-          <div
-            key={imageLayouts.map((imageLayout) => imageLayout.src).join()}
-            style={{
-              display: "inline-block",
-              width: "100%",
-              aspectRatio: `${values.page.width} / ${values.page.height}`,
-              background: "white",
-              minHeight: 0,
-              position: "relative",
-            }}
-            ref={(page) => {
-              props.pages.value[index] = page as HTMLElement;
-            }}
-          >
-            {imageLayouts.map((imageLayout) => {
-              return (
-                // eslint-disable-next-line qwik/jsx-img
-                <img
-                  key={imageLayout.src}
-                  src={imageLayout.src}
-                  style={{
-                    position: "absolute",
-                    left: `calc(${imageLayout.x} / ${values.page.width} * 100%)`,
-                    marginTop: `calc(${imageLayout.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
-                    width: `calc(${imageLayout.width} / ${values.page.width} * 100%)`,
-                    aspectRatio: `${imageLayout.width} / ${imageLayout.height}`,
-                  }}
-                />
-              );
-            })}
-          </div>
-        );
-      })}
+      {[{ imageLayouts: [] }, { imageLayouts: [] }, { imageLayouts: [] }, ...imageSheets].map(
+        ({ imageLayouts }, index) => {
+          return (
+            <div
+              key={imageLayouts.map((imageLayout) => imageLayout.src).join()}
+              class={css({
+                display: "inline-block",
+                borderRadius: "sm",
+                background: "white",
+                boxShadow: "sm",
+                position: "relative",
+              })}
+              style={{
+                display: "inline-block",
+                width: "100%",
+                aspectRatio: `${values.page.width} / ${values.page.height}`,
+                minHeight: 0,
+                position: "relative",
+                marginTop: index > 0 ? `calc(0.5 / ${values.page.width} * 100%)` : "0", // use margin to simulate inches based off width (margin-top is based off width)
+              }}
+              ref={(page) => {
+                props.pages.value[index] = page as HTMLElement;
+              }}
+            >
+              {imageLayouts.map((imageLayout) => {
+                return (
+                  // eslint-disable-next-line qwik/jsx-img
+                  <img
+                    key={imageLayout.src}
+                    src={imageLayout.src}
+                    style={{
+                      position: "absolute",
+                      left: `calc(${imageLayout.x} / ${values.page.width} * 100%)`,
+                      marginTop: `calc(${imageLayout.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
+                      width: `calc(${imageLayout.width} / ${values.page.width} * 100%)`,
+                      aspectRatio: `${imageLayout.width} / ${imageLayout.height}`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          );
+        }
+      )}
     </div>
   );
 });
@@ -149,6 +159,7 @@ export default component$(() => {
   return (
     <>
       <button
+        class={css({ flexDir: "row" })}
         onClick$={async () => {
           const doc = new jsPDF({
             unit: "in",
@@ -196,41 +207,47 @@ export default component$(() => {
       >
         Download
       </button>
-      <div style={{ width: "70%", margin: "auto", maxWidth: "80vh", minWidth: "500px", display: "flex" }}>
-        <Document values={config} imageSheets={imageSheets.value} pages={pages} />
+      <div class={css({ display: "flex", flexDir: "column", alignItems: "center" })}>
         <div
-          style={{
-            width: "400px",
-            marginLeft: "30px",
-            marginTop: "30px",
-            background: "white",
-            height: "500px",
-            padding: "20px",
-          }}
+          // style={{ width: "70%", margin: "auto", maxWidth: "80vh", minWidth: "500px", display: "flex" }}
+          class={css({ width: "xl", maxWidth: "11/12" })}
         >
-          <h2>Images</h2>
-          <form
-            preventdefault:submit
-            style={{ border: "1px solid #444", padding: "20px" }}
-            onSubmit$={async (event) => {
-              const { db, subscriber } = await getConnection();
-              const file = new FormData(event.target as any).get("image") as File;
-
-              db.add("images", {
-                id: Math.random() + "",
-                blob: new Blob([file], { type: file.type }),
-              });
-              subscriber.notify();
-
-              // localForage.setItem("image:1", blob);
+          <Document values={config} imageSheets={imageSheets.value} pages={pages} />
+          <div
+            hidden={true /* TODO: show options */}
+            style={{
+              width: "400px",
+              marginLeft: "30px",
+              marginTop: "30px",
+              background: "white",
+              height: "500px",
+              padding: "20px",
             }}
           >
-            <input type="file" name="image" accept="image/*" />
-            <button type="submit">Upload</button>
-          </form>
-          {config.images.map((image) => (
-            <img src={image.src} alt="" width={100} height={100} />
-          ))}
+            <h2>Images</h2>
+            <form
+              preventdefault:submit
+              style={{ border: "1px solid #444", padding: "20px" }}
+              onSubmit$={async (event) => {
+                const { db, subscriber } = await getConnection();
+                const file = new FormData(event.target as any).get("image") as File;
+
+                db.add("images", {
+                  id: Math.random() + "",
+                  blob: new Blob([file], { type: file.type }),
+                });
+                subscriber.notify();
+
+                // localForage.setItem("image:1", blob);
+              }}
+            >
+              <input type="file" name="image" accept="image/*" />
+              <button type="submit">Upload</button>
+            </form>
+            {config.images.map((image) => (
+              <img key={image.src} src={image.src} alt="" width={100} height={100} />
+            ))}
+          </div>
         </div>
       </div>
     </>

@@ -20,14 +20,7 @@ export default component$(() => {
           <style dangerouslySetInnerHTML="#app { display: none; }" />
         </noscript>
       )}
-      <div id="print" class="hidden">
-        {/* TODO: improve message in future */}
-        <Error heading="Print Error">
-          It looks like you’re trying to print this application rather than your project.
-          <br />
-          Click the “Download” button inside your project to generate a printable PDF.
-        </Error>
-      </div>
+      {/* TODO: improve message in future */}
       <div id="app">{render.value && <Slot />}</div>
     </div>
   );
