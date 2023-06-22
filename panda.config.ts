@@ -3,6 +3,12 @@ import { defineConfig, defineGlobalStyles } from "@pandacss/dev";
 const globalCss = defineGlobalStyles({
   "html, body": {
     background: "gray.50",
+    fontFamily: "body",
+    color: "gray.900",
+  },
+  "*": {
+    WebkitTapHighlightColor: "transparent",
+    WebkitTouchCallout: "none",
   },
 });
 
@@ -19,7 +25,25 @@ export default defineConfig({
 
   // Useful for theme customization
   theme: {
-    extend: {},
+    extend: {
+      tokens: {
+        spacing: {
+          "0": { value: "0" },
+        },
+        fonts: {
+          body: {
+            value: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"`,
+          },
+        },
+      },
+    },
+  },
+
+  conditions: {
+    extend: {
+      // '_parentActive': ""
+      tabChecked: "input:checked ~ &",
+    },
   },
 
   globalCss,

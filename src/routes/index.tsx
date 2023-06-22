@@ -4,7 +4,6 @@ import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import { getConnection } from "~/utils/data";
 import exifreader from "exifreader";
 import { css } from "~/panda/css";
-import { center } from "~/panda/patterns";
 
 type Config = {
   page: {
@@ -70,50 +69,48 @@ const Document = component$(({ values, imageSheets, ...props }: DocumentProps) =
         marginTop: "25px",
       }}
     >
-      {[{ imageLayouts: [] }, { imageLayouts: [] }, { imageLayouts: [] }, ...imageSheets].map(
-        ({ imageLayouts }, index) => {
-          return (
-            <div
-              key={imageLayouts.map((imageLayout) => imageLayout.src).join()}
-              class={css({
-                display: "inline-block",
-                borderRadius: "sm",
-                background: "white",
-                boxShadow: "sm",
-                position: "relative",
-              })}
-              style={{
-                display: "inline-block",
-                width: "100%",
-                aspectRatio: `${values.page.width} / ${values.page.height}`,
-                minHeight: 0,
-                position: "relative",
-                marginTop: index > 0 ? `calc(0.5 / ${values.page.width} * 100%)` : "0", // use margin to simulate inches based off width (margin-top is based off width)
-              }}
-              ref={(page) => {
-                props.pages.value[index] = page as HTMLElement;
-              }}
-            >
-              {imageLayouts.map((imageLayout) => {
-                return (
-                  // eslint-disable-next-line qwik/jsx-img
-                  <img
-                    key={imageLayout.src}
-                    src={imageLayout.src}
-                    style={{
-                      position: "absolute",
-                      left: `calc(${imageLayout.x} / ${values.page.width} * 100%)`,
-                      marginTop: `calc(${imageLayout.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
-                      width: `calc(${imageLayout.width} / ${values.page.width} * 100%)`,
-                      aspectRatio: `${imageLayout.width} / ${imageLayout.height}`,
-                    }}
-                  />
-                );
-              })}
-            </div>
-          );
-        }
-      )}
+      {imageSheets.map(({ imageLayouts }, index) => {
+        return (
+          <div
+            key={imageLayouts.map((imageLayout) => imageLayout.src).join()}
+            class={css({
+              display: "inline-block",
+              borderRadius: "sm",
+              background: "white",
+              boxShadow: "sm",
+              position: "relative",
+            })}
+            style={{
+              display: "inline-block",
+              width: "100%",
+              aspectRatio: `${values.page.width} / ${values.page.height}`,
+              minHeight: 0,
+              position: "relative",
+              marginTop: index > 0 ? `calc(0.5 / ${values.page.width} * 100%)` : "0", // use margin to simulate inches based off width (margin-top is based off width)
+            }}
+            ref={(page) => {
+              props.pages.value[index] = page as HTMLElement;
+            }}
+          >
+            {imageLayouts.map((imageLayout) => {
+              return (
+                // eslint-disable-next-line qwik/jsx-img
+                <img
+                  key={imageLayout.src}
+                  src={imageLayout.src}
+                  style={{
+                    position: "absolute",
+                    left: `calc(${imageLayout.x} / ${values.page.width} * 100%)`,
+                    marginTop: `calc(${imageLayout.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
+                    width: `calc(${imageLayout.width} / ${values.page.width} * 100%)`,
+                    aspectRatio: `${imageLayout.width} / ${imageLayout.height}`,
+                  }}
+                />
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 });
@@ -126,7 +123,24 @@ export default component$(() => {
       margin: 0.25,
       padding: 0.5,
     },
-    images: [],
+    images: [
+      // TODO: temp
+      {
+        width: 4,
+        height: 4,
+        src: "public/examples/pp.jpeg",
+      },
+      {
+        width: 4,
+        height: 5.326397919375813,
+        src: "public/examples/cats.jpeg",
+      },
+      {
+        width: 4,
+        height: 5.326397919375813,
+        src: "public/examples/breakfast.jpeg",
+      },
+    ],
   });
 
   const pages = useSignal<HTMLElement[]>([]);
@@ -159,6 +173,7 @@ export default component$(() => {
   return (
     <>
       <button
+        hidden={true /* TODO: renable */}
         class={css({ flexDir: "row" })}
         onClick$={async () => {
           const doc = new jsPDF({
@@ -209,9 +224,80 @@ export default component$(() => {
       </button>
       <div class={css({ display: "flex", flexDir: "column", alignItems: "center" })}>
         <div
-          // style={{ width: "70%", margin: "auto", maxWidth: "80vh", minWidth: "500px", display: "flex" }}
-          class={css({ width: "xl", maxWidth: "11/12" })}
+          class={css({
+            bg: "white",
+            pos: "sticky",
+            top: "0",
+            paddingBlock: "5",
+            zIndex: 1,
+            boxShadow: "xs",
+            w: "full",
+            display: "flex",
+            flexDir: "column",
+            alignItems: "center",
+          })}
         >
+          <div class={css({ width: "xl", maxWidth: "11/12", display: "grid", gridGap: "4" })}>
+            <h1
+              class={css({
+                w: "full",
+                fontSize: "2xl",
+                fontWeight: "extrabold",
+                outlineColor: "transparent",
+                lineHeight: "tight",
+              })}
+            >
+              Lucy’s day at the beach
+            </h1>
+            <div
+              class={css({
+                display: "flex",
+                justifyContent: "stretch",
+                bg: "gray.50",
+                borderRadius: "sm",
+                boxShadow: "inner",
+              })}
+            >
+              {/* TODO: maybe role="tab" is a better a11y role than radios */}
+              {["Photos", "Preview"].map((value, index) => (
+                <label
+                  key={value}
+                  class={css({
+                    w: "full",
+                    display: "grid",
+                  })}
+                >
+                  <input
+                    type="radio"
+                    name="view"
+                    value={value.toLowerCase()}
+                    class={css({ gridArea: "1/1", appearance: "none" })}
+                    checked={index === 0}
+                  />
+                  <span
+                    class={css({
+                      gridArea: "1/1",
+                      paddingBlock: "2",
+                      paddingInline: "3",
+                      w: "full",
+                      textAlign: "center",
+                      fontWeight: "medium",
+                      cursor: "pointer",
+                      _tabChecked: {
+                        boxShadow: "sm",
+                        borderRadius: "sm",
+                        bg: "white",
+                      },
+                    })}
+                  >
+                    {value}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div class={css({ width: "xl", maxWidth: "11/12" })}>
           <Document values={config} imageSheets={imageSheets.value} pages={pages} />
           <div
             hidden={true /* TODO: show options */}
