@@ -2,7 +2,7 @@ import { defineConfig, defineGlobalStyles } from "@pandacss/dev";
 
 const globalCss = defineGlobalStyles({
   "html, body": {
-    background: "gray.50",
+    background: "gray.100",
     fontFamily: "body",
     color: "gray.900",
   },
@@ -16,6 +16,7 @@ export default defineConfig({
   // Whether to use css reset
   preflight: true,
   strictTokens: true,
+  jsxFramework: "qwik",
 
   // Where to look for your css declarations
   include: ["./src/**/*.{js,jsx,ts,tsx}", "./pages/**/*.{js,jsx,ts,tsx}"],
@@ -44,6 +45,7 @@ export default defineConfig({
       // '_parentActive': ""
       tabChecked: "input:checked ~ &",
       pointerDown: "&[data-pointerdown]",
+      hoverable: "@media(hover: hover)",
     },
   },
 

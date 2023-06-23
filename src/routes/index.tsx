@@ -1,12 +1,15 @@
-import { component$, useComputed$, useSignal, Signal, useVisibleTask$, useStore } from "@builder.io/qwik";
+import { component$, useComputed$, useSignal, useVisibleTask$, useStore } from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
-import { getConnection } from "~/utils/data";
 import exifreader from "exifreader";
 import { css } from "~/panda/css";
+import { flex } from "~/panda/patterns";
 import { MobileTabs } from "~/components/MobileTabs";
+import { Preview } from "~/components/preview/Preview";
+import { Photos } from "~/components/photos/Photos";
+import { getConnection } from "~/utils/data";
 
-type Config = {
+export type Config = {
   page: {
     width: number;
     height: number;
@@ -20,15 +23,7 @@ type Config = {
   }>;
 };
 
-type BaseDocumentProps = {
-  values: Config;
-  pages: Signal<HTMLElement[]>;
-  imageSheets: ImageSheet[];
-};
-
-type DocumentProps = BaseDocumentProps;
-
-type ImageSheet = ReturnType<typeof useImageSheets>["value"][number];
+export type ImageSheet = ReturnType<typeof useImageSheets>["value"][number];
 
 function useImageSheets(config: Config) {
   return useComputed$(() => {
@@ -58,64 +53,6 @@ function useImageSheets(config: Config) {
     });
   });
 }
-
-const Document = component$(({ values, imageSheets, ...props }: DocumentProps) => {
-  return (
-    <div
-      style={{
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        marginBottom: "25px",
-        marginTop: "25px",
-      }}
-    >
-      {imageSheets.map(({ imageLayouts }, index) => {
-        return (
-          <div
-            key={imageLayouts.map((imageLayout) => imageLayout.src).join()}
-            class={css({
-              display: "inline-block",
-              borderRadius: "sm",
-              background: "white",
-              boxShadow: "sm",
-              position: "relative",
-              pointerEvents: "none",
-            })}
-            style={{
-              display: "inline-block",
-              width: "100%",
-              aspectRatio: `${values.page.width} / ${values.page.height}`,
-              minHeight: 0,
-              position: "relative",
-              marginTop: index > 0 ? `calc(0.5 / ${values.page.width} * 100%)` : "0", // use margin to simulate inches based off width (margin-top is based off width)
-            }}
-            ref={(page) => {
-              props.pages.value[index] = page as HTMLElement;
-            }}
-          >
-            {imageLayouts.map((imageLayout) => {
-              return (
-                // eslint-disable-next-line qwik/jsx-img
-                <img
-                  key={imageLayout.src}
-                  src={imageLayout.src}
-                  style={{
-                    position: "absolute",
-                    left: `calc(${imageLayout.x} / ${values.page.width} * 100%)`,
-                    marginTop: `calc(${imageLayout.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
-                    width: `calc(${imageLayout.width} / ${values.page.width} * 100%)`,
-                    aspectRatio: `${imageLayout.width} / ${imageLayout.height}`,
-                  }}
-                />
-              );
-            })}
-          </div>
-        );
-      })}
-    </div>
-  );
-});
 
 export default component$(() => {
   const tab = useSignal<"Photos" | "Preview">("Preview");
@@ -256,42 +193,15 @@ export default component$(() => {
             <MobileTabs activeTab={tab} />
           </div>
         </div>
-        <div class={css({ width: "xl", maxWidth: "11/12" })}>
-          {tab.value === "Preview" && <Document values={config} imageSheets={imageSheets.value} pages={pages} />}
-          <div
-            hidden={true /* TODO: show options */}
-            style={{
-              width: "400px",
-              marginLeft: "30px",
-              marginTop: "30px",
-              background: "white",
-              height: "500px",
-              padding: "20px",
-            }}
-          >
-            <h2>Images</h2>
-            <form
-              preventdefault:submit
-              style={{ border: "1px solid #444", padding: "20px" }}
-              onSubmit$={async (event) => {
-                const { db, subscriber } = await getConnection();
-                const file = new FormData(event.target as any).get("image") as File;
-
-                db.add("images", {
-                  id: Math.random() + "",
-                  blob: new Blob([file], { type: file.type }),
-                });
-                subscriber.notify();
-
-                // localForage.setItem("image:1", blob);
-              }}
-            >
-              <input type="file" name="image" accept="image/*" />
-              <button type="submit">Upload</button>
-            </form>
-            {config.images.map((image) => (
-              <img key={image.src} src={image.src} alt="" width={100} height={100} />
-            ))}
+        <div class={css({ width: "xl", maxWidth: "11/12", marginBlock: "4", display: "grid", gap: "4" })}>
+          {/* TODO: figure out why style doesnt work in Panda */}
+          <div class={flex({ w: "full" })} style={{ justifyContent: "space-between" }}>
+            <a href="#">Back</a>
+            <button>Download</button>
+          </div>
+          <div>
+            {tab.value === "Photos" && <Photos config={config} />}
+            {tab.value === "Preview" && <Preview values={config} imageSheets={imageSheets.value} pages={pages} />}
           </div>
         </div>
       </div>

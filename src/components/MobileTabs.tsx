@@ -44,6 +44,12 @@ const MobileTab = component$<{ value: "Photos" | "Preview"; activeTab: Signal<"P
               bg: "gray.100",
               boxShadow: "inner",
             },
+            _hoverable: {
+              _hover: {
+                bg: "gray.100",
+                boxShadow: "inner",
+              },
+            },
             _tabChecked: {
               boxShadow: "sm",
               bg: "white",
