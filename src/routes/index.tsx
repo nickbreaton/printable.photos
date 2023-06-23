@@ -1,4 +1,4 @@
-import { component$, useComputed$, useSignal, useVisibleTask$, useStore } from "@builder.io/qwik";
+import { component$, useComputed$, useSignal, useVisibleTask$, useStore, $ } from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import exifreader from "exifreader";
@@ -8,6 +8,7 @@ import { MobileTabs } from "~/components/MobileTabs";
 import { Preview } from "~/components/preview/Preview";
 import { Photos } from "~/components/photos/Photos";
 import { getConnection } from "~/utils/data";
+import { useSessionSignal } from "~/hooks/useSessionStorage";
 
 export type Config = {
   page: {
@@ -55,7 +56,7 @@ function useImageSheets(config: Config) {
 }
 
 export default component$(() => {
-  const tab = useSignal<"Photos" | "Preview">("Preview");
+  const tab = useSessionSignal<"Photos" | "Preview">("tab", "Preview");
 
   const config: Config = useStore({
     page: {
@@ -111,100 +112,93 @@ export default component$(() => {
     });
   });
 
+  const download = $(async () => {
+    const doc = new jsPDF({
+      unit: "in",
+      orientation: "p",
+      format: [config.page.width, config.page.height],
+    });
+
+    doc.deletePage(1);
+
+    for (const sheet of imageSheets.value) {
+      doc.addPage();
+
+      for (const image of sheet.imageLayouts) {
+        console.log(image);
+
+        // TODO: this probably is not effecient (can do blob.arrayBuffer() directly)
+        const blob = await fetch(image.src).then((res) => res.blob());
+        const data = exifreader.load(await blob.arrayBuffer());
+
+        switch (data.Orientation?.value) {
+          // TODO fill in more cases
+          // https://jdhao.github.io/2019/07/31/image_rotation_exif_info/
+          case 6:
+            doc.addImage(
+              image.src,
+              blob.type,
+              image.x,
+              image.y - image.width,
+              image.height,
+              image.width,
+              undefined,
+              undefined,
+              -90
+            );
+            break;
+          default:
+            doc.addImage(image.src, blob.type, image.x, image.y, image.width, image.height);
+            break;
+        }
+      }
+    }
+
+    doc.save("canvas.pdf");
+  });
+
   return (
-    <>
-      <button
-        hidden={true /* TODO: renable */}
-        class={css({ flexDir: "row" })}
-        onClick$={async () => {
-          const doc = new jsPDF({
-            unit: "in",
-            orientation: "p",
-            format: [config.page.width, config.page.height],
-          });
-
-          doc.deletePage(1);
-
-          for (const sheet of imageSheets.value) {
-            doc.addPage();
-
-            for (const image of sheet.imageLayouts) {
-              console.log(image);
-
-              // TODO: this probably is not effecient (can do blob.arrayBuffer() directly)
-              const blob = await fetch(image.src).then((res) => res.blob());
-              const data = exifreader.load(await blob.arrayBuffer());
-
-              switch (data.Orientation?.value) {
-                // TODO fill in more cases
-                // https://jdhao.github.io/2019/07/31/image_rotation_exif_info/
-                case 6:
-                  doc.addImage(
-                    image.src,
-                    blob.type,
-                    image.x,
-                    image.y - image.width,
-                    image.height,
-                    image.width,
-                    undefined,
-                    undefined,
-                    -90
-                  );
-                  break;
-                default:
-                  doc.addImage(image.src, blob.type, image.x, image.y, image.width, image.height);
-                  break;
-              }
-            }
-          }
-
-          doc.save("canvas.pdf");
-        }}
+    <div class={css({ display: "flex", flexDir: "column", alignItems: "center" })}>
+      <div
+        class={css({
+          bg: "white",
+          pos: "sticky",
+          top: "0",
+          paddingBlock: "5",
+          zIndex: 1,
+          boxShadow: "xs",
+          w: "full",
+          display: "flex",
+          flexDir: "column",
+          alignItems: "center",
+        })}
       >
-        Download
-      </button>
-      <div class={css({ display: "flex", flexDir: "column", alignItems: "center" })}>
-        <div
-          class={css({
-            bg: "white",
-            pos: "sticky",
-            top: "0",
-            paddingBlock: "5",
-            zIndex: 1,
-            boxShadow: "xs",
-            w: "full",
-            display: "flex",
-            flexDir: "column",
-            alignItems: "center",
-          })}
-        >
-          <div class={css({ width: "xl", maxWidth: "11/12", display: "grid", gridGap: "4" })}>
-            <h1
-              class={css({
-                w: "full",
-                fontSize: "2xl",
-                fontWeight: "extrabold",
-                outlineColor: "transparent",
-                lineHeight: "tight",
-              })}
-            >
-              Lucy’s day at the beach
-            </h1>
-            <MobileTabs activeTab={tab} />
-          </div>
-        </div>
-        <div class={css({ width: "xl", maxWidth: "11/12", marginBlock: "4", display: "grid", gap: "4" })}>
-          {/* TODO: figure out why style doesnt work in Panda */}
-          <div class={flex({ w: "full" })} style={{ justifyContent: "space-between" }}>
-            <a href="#">Back</a>
-            <button>Download</button>
-          </div>
-          <div>
-            {tab.value === "Photos" && <Photos config={config} />}
-            {tab.value === "Preview" && <Preview values={config} imageSheets={imageSheets.value} pages={pages} />}
-          </div>
+        <div class={css({ width: "xl", maxWidth: "11/12", display: "grid", gridGap: "4" })}>
+          <h1
+            class={css({
+              w: "full",
+              fontSize: "2xl",
+              fontWeight: "extrabold",
+              outlineColor: "transparent",
+              lineHeight: "tight",
+            })}
+          >
+            Lucy’s day at the beach
+          </h1>
+          <MobileTabs activeTab={tab} />
         </div>
       </div>
-    </>
+      <div class={css({ width: "xl", maxWidth: "11/12", marginBlock: "4", display: "grid", gap: "4" })}>
+        {/* TODO: figure out why style doesnt work in Panda */}
+        <div class={flex({ w: "full" })} style={{ justifyContent: "space-between" }}>
+          <a href="#">Projects</a>
+          <button onClick$={download}>Download</button>
+        </div>
+        <div>
+          {tab.value === "Photos" && <Photos config={config} />}
+          {tab.value === "Preview" && <Preview values={config} imageSheets={imageSheets.value} pages={pages} />}
+        </div>
+      </div>
+    </div>
   );
 });
