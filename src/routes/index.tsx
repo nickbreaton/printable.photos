@@ -3,7 +3,6 @@ import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import exifreader from "exifreader";
 import { css } from "~/panda/css";
-import { flex } from "~/panda/patterns";
 import { MobileTabs } from "~/components/MobileTabs";
 import { Preview } from "~/components/preview/Preview";
 import { Photos } from "~/components/photos/Photos";
@@ -189,8 +188,7 @@ export default component$(() => {
         </div>
       </div>
       <div class={css({ width: "xl", maxWidth: "11/12", marginBlock: "4", display: "grid", gap: "4" })}>
-        {/* TODO: figure out why style doesnt work in Panda */}
-        <div class={flex({ w: "full" })} style={{ justifyContent: "space-between" }}>
+        <div class={css({ w: "full", display: "flex", justifyContent: "space-between" })}>
           <a href="#">Projects</a>
           <button onClick$={download}>Download</button>
         </div>
