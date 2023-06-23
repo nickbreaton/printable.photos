@@ -8,7 +8,7 @@ import { MobileTabs } from "~/components/MobileTabs";
 import { Preview } from "~/components/preview/Preview";
 import { Photos } from "~/components/photos/Photos";
 import { getConnection } from "~/utils/data";
-import { useSessionSignal } from "~/hooks/useSessionStorage";
+import { useHistoryState } from "~/hooks/useHistoryState";
 
 export type Config = {
   page: {
@@ -56,7 +56,7 @@ function useImageSheets(config: Config) {
 }
 
 export default component$(() => {
-  const tab = useSessionSignal<"Photos" | "Preview">("tab", "Preview");
+  const tab = useHistoryState<"Photos" | "Preview">("tab", "Preview");
 
   const config: Config = useStore({
     page: {
