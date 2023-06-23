@@ -1,19 +1,10 @@
-import { Signal, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import { Signal, component$ } from "@builder.io/qwik";
 import { css } from "~/panda/css";
-import { radEventListener } from "rad-event-listener";
 
 const MobileTab = component$<{ value: "Photos" | "Preview"; activeTab: Signal<"Photos" | "Preview"> }>(
   ({ value, activeTab }) => {
-    const isPointerDown = useSignal(false);
-
-    useVisibleTask$(({ cleanup }) => {
-      cleanup(radEventListener(document, "pointerup", () => (isPointerDown.value = false)));
-      cleanup(radEventListener(document, "pointercancel", () => (isPointerDown.value = false)));
-    });
-
     return (
       <label
-        onPointerDown$={() => (isPointerDown.value = true)}
         class={css({
           w: "full",
           display: "grid",
@@ -29,7 +20,6 @@ const MobileTab = component$<{ value: "Photos" | "Preview"; activeTab: Signal<"P
           onInput$={() => (activeTab.value = value)}
         />
         <span
-          data-pointerdown={isPointerDown.value}
           class={css({
             gridArea: "1/1",
             paddingBlock: "2",

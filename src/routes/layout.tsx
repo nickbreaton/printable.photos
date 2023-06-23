@@ -1,6 +1,7 @@
 import { component$, Slot, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 import { isServer } from "@builder.io/qwik/build";
 import Error from "~/components/Error";
+import { usePointerDown } from "~/hooks/usePointerDown";
 
 export default component$(() => {
   const render = useSignal(false);
@@ -8,6 +9,8 @@ export default component$(() => {
   useVisibleTask$(() => {
     render.value = true;
   });
+
+  usePointerDown();
 
   return (
     <div>

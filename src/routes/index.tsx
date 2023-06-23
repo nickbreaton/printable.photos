@@ -8,6 +8,8 @@ import { Preview } from "~/components/preview/Preview";
 import { Photos } from "~/components/photos/Photos";
 import { getConnection } from "~/utils/data";
 import { useHistoryState } from "~/hooks/useHistoryState";
+import { Navigation } from "~/components/Navigation";
+import slugify from "@sindresorhus/slugify";
 
 export type Config = {
   page: {
@@ -56,6 +58,7 @@ function useImageSheets(config: Config) {
 
 export default component$(() => {
   const tab = useHistoryState<"Photos" | "Preview">("tab", "Preview");
+  const projectName = "Lucy’s day at the beach";
 
   const config: Config = useStore({
     page: {
@@ -124,8 +127,6 @@ export default component$(() => {
       doc.addPage();
 
       for (const image of sheet.imageLayouts) {
-        console.log(image);
-
         // TODO: this probably is not effecient (can do blob.arrayBuffer() directly)
         const blob = await fetch(image.src).then((res) => res.blob());
         const data = exifreader.load(await blob.arrayBuffer());
@@ -153,7 +154,7 @@ export default component$(() => {
       }
     }
 
-    doc.save("canvas.pdf");
+    doc.save(`${slugify(projectName, { customReplacements: [["’", ""]] })}.pdf`);
   });
 
   return (
@@ -182,16 +183,22 @@ export default component$(() => {
               lineHeight: "tight",
             })}
           >
-            Lucy’s day at the beach
+            {projectName}
           </h1>
           <MobileTabs activeTab={tab} />
         </div>
       </div>
-      <div class={css({ width: "xl", maxWidth: "11/12", marginBlock: "4", display: "grid", gap: "4" })}>
-        <div class={css({ w: "full", display: "flex", justifyContent: "space-between" })}>
-          <a href="#">Projects</a>
-          <button onClick$={download}>Download</button>
-        </div>
+      <div
+        class={css({
+          width: "xl",
+          maxWidth: "11/12",
+          marginBlockStart: "4",
+          marginBlockEnd: "5",
+          display: "grid",
+          gap: "4",
+        })}
+      >
+        <Navigation onDownload={download} />
         <div>
           {tab.value === "Photos" && <Photos config={config} />}
           {tab.value === "Preview" && <Preview values={config} imageSheets={imageSheets.value} pages={pages} />}
