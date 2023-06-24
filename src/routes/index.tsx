@@ -6,11 +6,12 @@ import { css } from "~/panda/css";
 import { MobileTabs } from "~/components/MobileTabs";
 import { Preview } from "~/components/preview/Preview";
 import { Photos } from "~/components/photos/Photos";
-import { Photo, photosSource } from "~/data/sources/photo";
+import { Photo, getPhotosSource } from "~/data/sources/photo";
 import { useHistoryState } from "~/hooks/useHistoryState";
 import { Navigation } from "~/components/Navigation";
 import slugify from "@sindresorhus/slugify";
 import { useDataSource } from "~/data/datasource";
+import { getSourceImageSource } from "~/data/sources/image";
 
 export type Config = {
   page: {
@@ -19,11 +20,6 @@ export type Config = {
     margin: number;
     padding: number;
   };
-  images: Array<{
-    src: string;
-    width: number;
-    height: number;
-  }>;
 };
 
 export type ImageSheet = ReturnType<typeof useImageSheets>["value"][number];
@@ -32,7 +28,7 @@ export type ImageSheet = ReturnType<typeof useImageSheets>["value"][number];
 // -
 // -
 
-function useImageSheets(config: Config) {
+function useImageSheets({ config, photos }: { config: Config; photos: Photo[] }) {
   return useComputed$(() => {
     const packer = new MaxRectsPacker(config.page.width, config.page.height, config.page.margin, {
       allowRotation: false, // TODO: optimization
@@ -40,9 +36,9 @@ function useImageSheets(config: Config) {
       border: config.page.padding,
     });
     packer.addArray(
-      config.images.map((image) => {
-        const rect = new Rectangle(image.width, image.height);
-        rect.data = image.src;
+      photos.map((photo) => {
+        const rect = new Rectangle(photo.width, photo.aspectRatio * photo.width);
+        rect.data = photo;
         return rect;
       })
     );
@@ -54,39 +50,16 @@ function useImageSheets(config: Config) {
           x: rect.x,
           y: rect.y,
           rotate: rect.rot,
-          src: rect.data,
+          photo: rect.data as Photo,
         })),
       };
     });
   });
 }
 
-// function useFetcher<T>(fetcher: QRL<() => Promise<T>>) {
-//   const data = useStore<
-//     | { isLoading: true; isFetching: boolean; value: null }
-//     | { isLoading: false; isFetching: boolean; value: NoSerialize<T> }
-//   >({ isLoading: true, isFetching: true, value: null });
-
-//   useVisibleTask$(() => {
-//     fetcher().then((value) => {
-//       data.value = noSerialize(value as any);
-//       data.isFetching = false;
-//       data.isLoading = false;
-//     });
-//   });
-
-//   return data;
-// }
-
 const Content = component$<{ photos: Photo[] }>(({ photos }) => {
-  return <pre>{JSON.stringify(photos, null, 2)}</pre>;
-});
-
-export default component$(() => {
   const tab = useHistoryState<"Photos" | "Preview">("tab", "Preview");
   const projectName = "Lucy’s day at the beach";
-
-  const photos = useDataSource($(() => photosSource));
 
   const config: Config = useStore({
     page: {
@@ -95,54 +68,14 @@ export default component$(() => {
       margin: 0.25,
       padding: 0.5,
     },
-    images: [
-      // TODO: temp
-      {
-        width: 4,
-        height: 4,
-        src: "public/examples/pp.jpeg",
-      },
-      {
-        width: 4,
-        height: 5.326397919375813,
-        src: "public/examples/cats.jpeg",
-      },
-      {
-        width: 4,
-        height: 5.326397919375813,
-        src: "public/examples/breakfast.jpeg",
-      },
-    ],
   });
 
   const pages = useSignal<HTMLElement[]>([]);
-  const imageSheets = useImageSheets(config);
-  // const storedImages = useSignal<string[]>([]);
-
-  // useVisibleTask$(({ cleanup }) => {
-  //   getConnection().then(async ({ db, subscriber }) => {
-  //     const read = async () => {
-  //       const records = await db.getAll("images");
-  //       config.images = await Promise.all(
-  //         records.map(async (record) => {
-  //           const src = URL.createObjectURL(record.blob);
-  //           const ratio = await new Promise<number>((resolve) => {
-  //             const img = document.createElement("img");
-  //             img.onload = () => {
-  //               resolve(img.height / img.width);
-  //             };
-  //             img.src = src;
-  //           });
-  //           return { src, width: 3, height: ratio * 3 };
-  //         })
-  //       );
-  //     };
-  //     cleanup(subscriber.subscribe(read));
-  //     await read();
-  //   });
-  // });
+  const imageSheets = useImageSheets({ config, photos });
 
   const download = $(async () => {
+    const objectUrlsToRevoke: string[] = [];
+
     const doc = new jsPDF({
       unit: "in",
       orientation: "p",
@@ -155,16 +88,22 @@ export default component$(() => {
       doc.addPage();
 
       for (const image of sheet.imageLayouts) {
-        // TODO: this probably is not effecient (can do blob.arrayBuffer() directly)
-        const blob = await fetch(image.src).then((res) => res.blob());
+        const blob = await new Promise<Blob>((resolve) => {
+          getSourceImageSource(image.photo.id).subscribe((image) => {
+            resolve(image.blob);
+          });
+        });
+
         const data = exifreader.load(await blob.arrayBuffer());
+        const src = URL.createObjectURL(blob);
+        objectUrlsToRevoke.push(src);
 
         switch (data.Orientation?.value) {
           // TODO fill in more cases
           // https://jdhao.github.io/2019/07/31/image_rotation_exif_info/
           case 6:
             doc.addImage(
-              image.src,
+              src,
               blob.type,
               image.x,
               image.y - image.width,
@@ -176,13 +115,14 @@ export default component$(() => {
             );
             break;
           default:
-            doc.addImage(image.src, blob.type, image.x, image.y, image.width, image.height);
+            doc.addImage(src, blob.type, image.x, image.y, image.width, image.height);
             break;
         }
       }
     }
 
     doc.save(`${slugify(projectName, { customReplacements: [["’", ""]] })}.pdf`);
+    objectUrlsToRevoke.forEach((url) => URL.revokeObjectURL(url));
   });
 
   return (
@@ -227,12 +167,21 @@ export default component$(() => {
         })}
       >
         <Navigation onDownload={download} />
-        {photos.isLoading ? null : <Content photos={photos.value} />}
         <div>
-          {tab.value === "Photos" && <Photos config={config} />}
+          {tab.value === "Photos" && <Photos config={config} photos={photos} />}
           {tab.value === "Preview" && <Preview values={config} imageSheets={imageSheets.value} pages={pages} />}
         </div>
       </div>
     </div>
   );
+});
+
+export default component$(() => {
+  const photos = useDataSource($(() => getPhotosSource()));
+
+  if (photos.isLoading) {
+    return <>Loading...</>;
+  }
+
+  return <Content photos={photos.value} />;
 });

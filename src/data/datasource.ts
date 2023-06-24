@@ -34,7 +34,7 @@ export function createDataSource<T>(
 }
 
 export function useDataSource<T>(getSource: QRL<() => DataSource<T>>) {
-  const data = useStore<{ isLoading: true; value: null } | { isLoading: false; value: NoSerialize<T> }>({
+  const data = useStore<{ isLoading: true; value: null } | { isLoading: false; value: T }>({
     isLoading: true,
     value: null,
   });

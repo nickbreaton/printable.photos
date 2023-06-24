@@ -1,4 +1,6 @@
-import { Signal, component$ } from "@builder.io/qwik";
+import { $, Signal, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import { useDataSource } from "~/data/datasource";
+import { getSourceImageSource } from "~/data/sources/image";
 import { css } from "~/panda/css";
 import { Config, ImageSheet } from "~/routes";
 
@@ -7,6 +9,36 @@ type PreviewProps = {
   pages: Signal<HTMLElement[]>;
   imageSheets: ImageSheet[];
 };
+
+const PreviewImage = component$<{ values: Config; imageLayout: ImageSheet["imageLayouts"][number] }>(
+  ({ values, imageLayout }) => {
+    const src = useSignal<string | null>(null);
+
+    useVisibleTask$(({ cleanup }) => {
+      const unsub = getSourceImageSource(imageLayout.photo.id).subscribe(({ blob }) => {
+        src.value = URL.createObjectURL(blob);
+        unsub(); // only needed once
+        cleanup(() => URL.revokeObjectURL(src.value!));
+      });
+      cleanup(unsub);
+    });
+
+    return (
+      // eslint-disable-next-line qwik/jsx-img
+      <img
+        src={src.value!}
+        style={{
+          opacity: src.value ? 1 : 0,
+          position: "absolute",
+          left: `calc(${imageLayout.x} / ${values.page.width} * 100%)`,
+          marginTop: `calc(${imageLayout.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
+          width: `calc(${imageLayout.width} / ${values.page.width} * 100%)`,
+          aspectRatio: `${imageLayout.width} / ${imageLayout.height}`,
+        }}
+      />
+    );
+  }
+);
 
 export const Preview = component$(({ values, imageSheets, ...props }: PreviewProps) => {
   return (
@@ -20,7 +52,7 @@ export const Preview = component$(({ values, imageSheets, ...props }: PreviewPro
       {imageSheets.map(({ imageLayouts }, index) => {
         return (
           <div
-            key={imageLayouts.map((imageLayout) => imageLayout.src).join()}
+            key={imageLayouts.map((imageLayout) => imageLayout.id).join()}
             class={css({
               display: "inline-block",
               borderRadius: "sm",
@@ -42,20 +74,7 @@ export const Preview = component$(({ values, imageSheets, ...props }: PreviewPro
             }}
           >
             {imageLayouts.map((imageLayout) => {
-              return (
-                // eslint-disable-next-line qwik/jsx-img
-                <img
-                  key={imageLayout.src}
-                  src={imageLayout.src}
-                  style={{
-                    position: "absolute",
-                    left: `calc(${imageLayout.x} / ${values.page.width} * 100%)`,
-                    marginTop: `calc(${imageLayout.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
-                    width: `calc(${imageLayout.width} / ${values.page.width} * 100%)`,
-                    aspectRatio: `${imageLayout.width} / ${imageLayout.height}`,
-                  }}
-                />
-              );
+              return <PreviewImage key={imageLayout.photo.id} values={values} imageLayout={imageLayout} />;
             })}
           </div>
         );

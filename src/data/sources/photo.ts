@@ -11,25 +11,26 @@ export interface Photo {
   aspectRatio: number;
   width: number;
   unit: "inches";
-  blob: Blob;
   createdAt: Date;
 }
 
-export const photosSource = createDataSource<Photo[]>(async ({ next, cleanup }) => {
-  const db = await getDatabaseConnection();
-  const fetch = () => db.getAll("photo");
+export const getPhotosSource = (/* TODO: projectId */) => {
+  return createDataSource<Photo[]>(async ({ next, cleanup }) => {
+    const db = await getDatabaseConnection();
+    const fetch = () => db.transaction("photo", "readwrite").store.getAll();
 
-  next(await fetch());
+    next(await fetch());
 
-  const emitter = getEmitter();
+    const emitter = getEmitter();
 
-  cleanup(
-    emitter.on("add-photo", async () => {
-      // TODO: optimize
-      next(await fetch());
-    })
-  );
-});
+    cleanup(
+      emitter.on("add-photo", async () => {
+        // TODO: optimize
+        next(await fetch());
+      })
+    );
+  });
+};
 
 export const addPhoto = async (photo: Photo) => {
   const db = await getDatabaseConnection();
