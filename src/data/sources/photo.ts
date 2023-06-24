@@ -1,6 +1,7 @@
 import { getDatabaseConnection } from "../database";
 import { createDataSource } from "../datasource";
 import { getEmitter } from "../emitter";
+import { deleteImage, getImagesSource, getSourceImageSource } from "./image";
 
 export type PhotoId = `photo-${string}`;
 
@@ -43,7 +44,17 @@ export const putPhoto = async (photo: Photo) => {
 export const deletePhoto = async (photoId: PhotoId) => {
   const db = await getDatabaseConnection();
   const emitter = getEmitter();
-  const t = db.transaction("photo", "readwrite");
-  await Promise.all([t.store.delete(photoId), t.done]);
+  const t = db.transaction(["photo", "image"], "readwrite");
+  await Promise.all([
+    t.objectStore("photo").delete(photoId),
+    new Promise<void>((resolve) => {
+      const unsub = getImagesSource(photoId).subscribe(async (images) => {
+        unsub();
+        await Promise.all(images.map((image) => deleteImage(image.id)));
+        resolve();
+      });
+    }),
+  ]);
+  await t.done;
   emitter.emit({ type: "change-photos" });
 };

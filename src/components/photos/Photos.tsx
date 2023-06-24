@@ -58,7 +58,7 @@ export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos 
               placeholder="width"
               value={photo.width}
               onChange$={(event) => {
-                putPhoto({ ...photo, width: parseInt(event.target.value) });
+                putPhoto({ ...photo, width: parseFloat(event.target.value) });
               }}
             />
             <button onClick$={() => deletePhoto(photo.id)}>Delete</button>
