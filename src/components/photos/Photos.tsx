@@ -1,7 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 import { Config } from "~/routes";
 import { css } from "~/panda/css";
-import { addPhoto } from "~/utils/data";
+import { addPhoto } from "~/data/sources/photo";
 
 export const Photos = component$<{ config: Config }>(({ config }) => {
   return (
@@ -20,6 +20,7 @@ export const Photos = component$<{ config: Config }>(({ config }) => {
             width: 0,
             unit: "inches",
             blob: new Blob([file], { type: file.type }),
+            createdAt: new Date(),
           });
         }}
       >

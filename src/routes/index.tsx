@@ -1,15 +1,4 @@
-import {
-  component$,
-  useComputed$,
-  useSignal,
-  useVisibleTask$,
-  useStore,
-  $,
-  useResource$,
-  QRL,
-  noSerialize,
-  NoSerialize,
-} from "@builder.io/qwik";
+import { component$, useComputed$, useSignal, useStore, $ } from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import exifreader from "exifreader";
@@ -17,10 +6,11 @@ import { css } from "~/panda/css";
 import { MobileTabs } from "~/components/MobileTabs";
 import { Preview } from "~/components/preview/Preview";
 import { Photos } from "~/components/photos/Photos";
-import { DataSource, Photo, photosSource } from "~/utils/data";
+import { Photo, photosSource } from "~/data/sources/photo";
 import { useHistoryState } from "~/hooks/useHistoryState";
 import { Navigation } from "~/components/Navigation";
 import slugify from "@sindresorhus/slugify";
+import { useDataSource } from "~/data/datasource";
 
 export type Config = {
   page: {
@@ -87,26 +77,6 @@ function useImageSheets(config: Config) {
 
 //   return data;
 // }
-
-function useDataSource<T>(getSource: QRL<() => DataSource<T>>) {
-  const data = useStore<{ isLoading: true; value: null } | { isLoading: false; value: NoSerialize<T> }>({
-    isLoading: true,
-    value: null,
-  });
-
-  useVisibleTask$(({ cleanup }) => {
-    getSource().then((source) => {
-      cleanup(
-        source.subscribe((next) => {
-          data.isLoading = false;
-          data.value = noSerialize(next as any);
-        })
-      );
-    });
-  });
-
-  return data;
-}
 
 const Content = component$<{ photos: Photo[] }>(({ photos }) => {
   return <pre>{JSON.stringify(photos, null, 2)}</pre>;
