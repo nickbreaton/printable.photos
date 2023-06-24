@@ -1,6 +1,5 @@
 import { getDatabaseConnection } from "../database";
 import { createDataSource } from "../datasource";
-import { getEmitter } from "../emitter";
 import { PhotoId } from "./photo";
 
 export type ImageId = `image-${string}`;

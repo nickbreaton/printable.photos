@@ -4,7 +4,7 @@ import { css } from "~/panda/css";
 import { Photo, PhotoId, addPhoto } from "~/data/sources/photo";
 import { addImage } from "~/data/sources/image";
 
-export const Photos = component$<{ config: Config; photos: Photo[] }>(({ config, photos }) => {
+export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos }) => {
   return (
     <div class={css({ background: "white" })}>
       <h2>Images</h2>
@@ -48,9 +48,9 @@ export const Photos = component$<{ config: Config; photos: Photo[] }>(({ config,
         <input type="file" name="image" accept="image/*" class={css({ w: "full" })} />
         <button type="submit">Upload</button>
       </form>
-      {/* {photos.map((photo) => (
-        <img key={photo.id} src={photo.src} alt="" width={100} height={100} />
-      ))} */}
+      {photos.map((photo) => (
+        <span key={photo.id}>{photo.name}</span>
+      ))}
     </div>
   );
 });

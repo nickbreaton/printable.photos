@@ -1,5 +1,4 @@
-import { $, Signal, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
-import { useDataSource } from "~/data/datasource";
+import { Signal, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 import { getSourceImageSource } from "~/data/sources/image";
 import { css } from "~/panda/css";
 import { Config, ImageSheet } from "~/routes";
@@ -52,7 +51,7 @@ export const Preview = component$(({ values, imageSheets, ...props }: PreviewPro
       {imageSheets.map(({ imageLayouts }, index) => {
         return (
           <div
-            key={imageLayouts.map((imageLayout) => imageLayout.id).join()}
+            key={imageLayouts.map((imageLayout) => imageLayout.photo.id).join()}
             class={css({
               display: "inline-block",
               borderRadius: "sm",
