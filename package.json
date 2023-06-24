@@ -47,15 +47,14 @@
     "vitest": "^0.32.2"
   },
   "dependencies": {
-    "@qwikest/icons": "^0.0.8",
     "@sindresorhus/slugify": "^2.2.1",
     "exifreader": "^4.12.1",
     "idb": "^7.1.1",
     "jspdf": "^2.5.1",
+    "just-memoize": "^2.2.0",
     "maxrects-packer": "^2.7.3",
     "qwik-feather-icons": "^1.2.1",
-    "rad-event-listener": "^0.2.4",
-    "styled-vanilla-extract": "^0.5.4"
+    "rad-event-listener": "^0.2.4"
   },
   "prettier": {
     "printWidth": 120

@@ -1,4 +1,15 @@
-import { component$, useComputed$, useSignal, useVisibleTask$, useStore, $ } from "@builder.io/qwik";
+import {
+  component$,
+  useComputed$,
+  useSignal,
+  useVisibleTask$,
+  useStore,
+  $,
+  useResource$,
+  QRL,
+  noSerialize,
+  NoSerialize,
+} from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import exifreader from "exifreader";
@@ -6,7 +17,7 @@ import { css } from "~/panda/css";
 import { MobileTabs } from "~/components/MobileTabs";
 import { Preview } from "~/components/preview/Preview";
 import { Photos } from "~/components/photos/Photos";
-import { getConnection } from "~/utils/data";
+import { DataSource, Photo, photosSource } from "~/utils/data";
 import { useHistoryState } from "~/hooks/useHistoryState";
 import { Navigation } from "~/components/Navigation";
 import slugify from "@sindresorhus/slugify";
@@ -26,6 +37,10 @@ export type Config = {
 };
 
 export type ImageSheet = ReturnType<typeof useImageSheets>["value"][number];
+
+// upload pipeline
+// -
+// -
 
 function useImageSheets(config: Config) {
   return useComputed$(() => {
@@ -56,9 +71,52 @@ function useImageSheets(config: Config) {
   });
 }
 
+// function useFetcher<T>(fetcher: QRL<() => Promise<T>>) {
+//   const data = useStore<
+//     | { isLoading: true; isFetching: boolean; value: null }
+//     | { isLoading: false; isFetching: boolean; value: NoSerialize<T> }
+//   >({ isLoading: true, isFetching: true, value: null });
+
+//   useVisibleTask$(() => {
+//     fetcher().then((value) => {
+//       data.value = noSerialize(value as any);
+//       data.isFetching = false;
+//       data.isLoading = false;
+//     });
+//   });
+
+//   return data;
+// }
+
+function useDataSource<T>(getSource: QRL<() => DataSource<T>>) {
+  const data = useStore<{ isLoading: true; value: null } | { isLoading: false; value: NoSerialize<T> }>({
+    isLoading: true,
+    value: null,
+  });
+
+  useVisibleTask$(({ cleanup }) => {
+    getSource().then((source) => {
+      cleanup(
+        source.subscribe((next) => {
+          data.isLoading = false;
+          data.value = noSerialize(next as any);
+        })
+      );
+    });
+  });
+
+  return data;
+}
+
+const Content = component$<{ photos: Photo[] }>(({ photos }) => {
+  return <pre>{JSON.stringify(photos, null, 2)}</pre>;
+});
+
 export default component$(() => {
   const tab = useHistoryState<"Photos" | "Preview">("tab", "Preview");
   const projectName = "Lucy’s day at the beach";
+
+  const photos = useDataSource($(() => photosSource));
 
   const config: Config = useStore({
     page: {
@@ -91,28 +149,28 @@ export default component$(() => {
   const imageSheets = useImageSheets(config);
   // const storedImages = useSignal<string[]>([]);
 
-  useVisibleTask$(({ cleanup }) => {
-    getConnection().then(async ({ db, subscriber }) => {
-      const read = async () => {
-        const records = await db.getAll("images");
-        config.images = await Promise.all(
-          records.map(async (record) => {
-            const src = URL.createObjectURL(record.blob);
-            const ratio = await new Promise<number>((resolve) => {
-              const img = document.createElement("img");
-              img.onload = () => {
-                resolve(img.height / img.width);
-              };
-              img.src = src;
-            });
-            return { src, width: 3, height: ratio * 3 };
-          })
-        );
-      };
-      cleanup(subscriber.subscribe(read));
-      await read();
-    });
-  });
+  // useVisibleTask$(({ cleanup }) => {
+  //   getConnection().then(async ({ db, subscriber }) => {
+  //     const read = async () => {
+  //       const records = await db.getAll("images");
+  //       config.images = await Promise.all(
+  //         records.map(async (record) => {
+  //           const src = URL.createObjectURL(record.blob);
+  //           const ratio = await new Promise<number>((resolve) => {
+  //             const img = document.createElement("img");
+  //             img.onload = () => {
+  //               resolve(img.height / img.width);
+  //             };
+  //             img.src = src;
+  //           });
+  //           return { src, width: 3, height: ratio * 3 };
+  //         })
+  //       );
+  //     };
+  //     cleanup(subscriber.subscribe(read));
+  //     await read();
+  //   });
+  // });
 
   const download = $(async () => {
     const doc = new jsPDF({
@@ -199,6 +257,7 @@ export default component$(() => {
         })}
       >
         <Navigation onDownload={download} />
+        {photos.isLoading ? null : <Content photos={photos.value} />}
         <div>
           {tab.value === "Photos" && <Photos config={config} />}
           {tab.value === "Preview" && <Preview values={config} imageSheets={imageSheets.value} pages={pages} />}

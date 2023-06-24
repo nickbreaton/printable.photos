@@ -1,7 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 import { Config } from "~/routes";
-import { getConnection } from "~/utils/data";
 import { css } from "~/panda/css";
+import { addPhoto } from "~/utils/data";
 
 export const Photos = component$<{ config: Config }>(({ config }) => {
   return (
@@ -11,14 +11,16 @@ export const Photos = component$<{ config: Config }>(({ config }) => {
         preventdefault:submit
         style={{ border: "1px solid #444", padding: "20px" }}
         onSubmit$={async (event) => {
-          const { db, subscriber } = await getConnection();
           const file = new FormData(event.target as any).get("image") as File;
 
-          db.add("images", {
-            id: Math.random() + "",
+          await addPhoto({
+            id: `photo-${crypto.randomUUID()}`,
+            name: file.name,
+            aspectRatio: 0,
+            width: 0,
+            unit: "inches",
             blob: new Blob([file], { type: file.type }),
           });
-          subscriber.notify();
         }}
       >
         <input type="file" name="image" accept="image/*" class={css({ w: "full" })} />

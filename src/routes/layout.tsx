@@ -23,7 +23,6 @@ export default component$(() => {
           <style dangerouslySetInnerHTML="#app { display: none; }" />
         </noscript>
       )}
-      {/* TODO: improve message in future */}
       <div id="app">{render.value && <Slot />}</div>
     </div>
   );
