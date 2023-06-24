@@ -24,7 +24,7 @@ export const getPhotosSource = (/* TODO: projectId */) => {
     const emitter = getEmitter();
 
     cleanup(
-      emitter.on("add-photo", async () => {
+      emitter.on("change-photos", async () => {
         // TODO: optimize
         next(await fetch());
       })
@@ -32,10 +32,18 @@ export const getPhotosSource = (/* TODO: projectId */) => {
   });
 };
 
-export const addPhoto = async (photo: Photo) => {
+export const putPhoto = async (photo: Photo) => {
   const db = await getDatabaseConnection();
   const emitter = getEmitter();
   const t = db.transaction("photo", "readwrite");
-  await Promise.all([t.store.add(photo), t.done]);
-  emitter.emit({ type: "add-photo", id: photo.id });
+  await Promise.all([t.store.put(photo), t.done]);
+  emitter.emit({ type: "change-photos" });
+};
+
+export const deletePhoto = async (photoId: PhotoId) => {
+  const db = await getDatabaseConnection();
+  const emitter = getEmitter();
+  const t = db.transaction("photo", "readwrite");
+  await Promise.all([t.store.delete(photoId), t.done]);
+  emitter.emit({ type: "change-photos" });
 };

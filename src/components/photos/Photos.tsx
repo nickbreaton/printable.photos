@@ -1,7 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 import { Config } from "~/routes";
 import { css } from "~/panda/css";
-import { Photo, PhotoId, addPhoto } from "~/data/sources/photo";
+import { Photo, PhotoId, deletePhoto, putPhoto } from "~/data/sources/photo";
 import { addImage } from "~/data/sources/image";
 
 export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos }) => {
@@ -28,7 +28,7 @@ export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos 
 
           // TODO: parallelize, use same transaction
 
-          await addPhoto({
+          await putPhoto({
             id: photoId,
             name: file.name,
             aspectRatio,
@@ -45,12 +45,26 @@ export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos 
           });
         }}
       >
-        <input type="file" name="image" accept="image/*" class={css({ w: "full" })} />
+        <input type="file" name="image" accept="image/png, image/gif, image/jpeg" class={css({ w: "full" })} />
         <button type="submit">Upload</button>
       </form>
-      {photos.map((photo) => (
-        <span key={photo.id}>{photo.name}</span>
-      ))}
+      <div class={css({ display: "grid", gap: "2", padding: "3" })}>
+        <h2>Photos</h2>
+        {photos.map((photo) => (
+          <div key={photo.id}>
+            <h3>{photo.name}</h3>
+            <input
+              type="text"
+              placeholder="width"
+              value={photo.width}
+              onChange$={(event) => {
+                putPhoto({ ...photo, width: parseInt(event.target.value) });
+              }}
+            />
+            <button onClick$={() => deletePhoto(photo.id)}>Delete</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 });

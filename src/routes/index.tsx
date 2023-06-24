@@ -28,33 +28,34 @@ export type ImageSheet = ReturnType<typeof useImageSheets>["value"][number];
 // -
 // -
 
-function useImageSheets({ config, photos }: { config: Config; photos: Photo[] }) {
-  return useComputed$(() => {
-    const packer = new MaxRectsPacker(config.page.width, config.page.height, config.page.margin, {
-      allowRotation: false, // TODO: optimization
-      smart: false,
-      border: config.page.padding,
-    });
-    packer.addArray(
-      photos.map((photo) => {
-        const rect = new Rectangle(photo.width, photo.aspectRatio * photo.width);
-        rect.data = photo;
-        return rect;
-      })
-    );
-    return packer.bins.map((bin) => {
-      return {
-        imageLayouts: bin.rects.map((rect) => ({
-          width: rect.width,
-          height: rect.height,
-          x: rect.x,
-          y: rect.y,
-          rotate: rect.rot,
-          photo: rect.data as Photo,
-        })),
-      };
-    });
+function useImageSheets(config: Config, photos: Photo[]) {
+  // return useComputed$(() => {
+  const packer = new MaxRectsPacker(config.page.width, config.page.height, config.page.margin, {
+    allowRotation: false, // TODO: optimization
+    smart: false,
+    border: config.page.padding,
   });
+  packer.addArray(
+    photos.map((photo) => {
+      const rect = new Rectangle(photo.width, photo.aspectRatio * photo.width);
+      rect.data = photo;
+      return rect;
+    })
+  );
+  const value = packer.bins.map((bin) => {
+    return {
+      imageLayouts: bin.rects.map((rect) => ({
+        width: rect.width,
+        height: rect.height,
+        x: rect.x,
+        y: rect.y,
+        rotate: rect.rot,
+        photo: rect.data as Photo,
+      })),
+    };
+  });
+  return { value };
+  // });
 }
 
 const Content = component$<{ photos: Photo[] }>(({ photos }) => {
@@ -71,7 +72,7 @@ const Content = component$<{ photos: Photo[] }>(({ photos }) => {
   });
 
   const pages = useSignal<HTMLElement[]>([]);
-  const imageSheets = useImageSheets({ config, photos });
+  const imageSheets = useImageSheets(config, photos);
 
   const download = $(async () => {
     const objectUrlsToRevoke: string[] = [];

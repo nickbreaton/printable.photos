@@ -1,5 +1,4 @@
 import memoize from "just-memoize";
-import { PhotoId } from "./sources/photo";
 
 function createEventEmitter<T extends { type: string }>() {
   const el = document.createElement("div");
@@ -12,6 +11,4 @@ function createEventEmitter<T extends { type: string }>() {
   };
 }
 
-export const getEmitter = memoize(() =>
-  createEventEmitter<{ type: "add-photo"; id: PhotoId } | { type: "delete-photo"; id: PhotoId }>()
-);
+export const getEmitter = memoize(() => createEventEmitter<{ type: "change-photos" }>());

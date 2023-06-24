@@ -16,7 +16,7 @@ interface Schema extends DBSchema {
 }
 
 export const getDatabaseConnection = memoize(() => {
-  return openDB<Schema>("projects7", 1, {
+  return openDB<Schema>("projects8", 1, {
     upgrade(db) {
       db.createObjectStore("photo", { keyPath: "id" });
 
