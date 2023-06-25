@@ -59,8 +59,14 @@ export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos 
               type="text"
               placeholder="width"
               value={photo.width}
-              onChange$={(event) => {
-                db.photos.put({ ...photo, width: parseFloat(event.target.value) });
+              onInput$={(event: any) => {
+                const width = parseFloat(event.target.value);
+
+                if (isNaN(width)) {
+                  return;
+                }
+
+                db.photos.where({ id: photo.id }).modify({ width });
               }}
             />
             <button onClick$={() => db.photos.delete(photo.id)}>Delete</button>

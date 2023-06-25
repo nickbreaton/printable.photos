@@ -14,9 +14,8 @@ class Database extends Dexie {
       images: "id,photoId,type,devicePixelRatio,[photoId+type]",
     });
 
-    this.photos.hook("deleting", async (id) => {
-      console.log("deleting images with photo id of", id);
-      await db.images.where({ photoId: id }).delete();
+    this.photos.hook("deleting", async (id, _, trans) => {
+      trans.on("complete", () => db.images.where("photoId").equals(id).delete());
     });
   }
 }
