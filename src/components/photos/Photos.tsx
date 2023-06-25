@@ -1,10 +1,10 @@
 import { component$ } from "@builder.io/qwik";
-import { Config } from "~/routes";
 import { css } from "~/panda/css";
-import { Photo, PhotoId } from "~/database/sources/photo";
+import { Photo, PhotoId } from "~/database/tables/photo";
 import { db } from "~/database/main";
+import { Project } from "~/database/tables/project";
 
-export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos }) => {
+export const Photos = component$<{ project: Project; photos: Photo[] }>(({ project, photos }) => {
   return (
     <div class={css({ background: "white" })}>
       <h2>Images</h2>
@@ -29,10 +29,11 @@ export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos 
           await db.transaction("rw", db.photos, db.images, async () => {
             const photoAddition = db.photos.add({
               id: photoId,
+              projectId: project.id,
               name: file.name,
               aspectRatio,
               width: 4,
-              unit: "inches",
+              unit: "in",
               createdAt: new Date(),
             });
 

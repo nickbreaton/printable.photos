@@ -1,16 +1,17 @@
 import { Signal, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
-import { getSourceImage } from "~/database/sources/image";
+import { getSourceImage } from "~/database/tables/image";
+import { Project } from "~/database/tables/project";
 import { css } from "~/panda/css";
-import { Config, ImageSheet } from "~/routes";
+import { ImageSheet } from "~/routes";
 
 type PreviewProps = {
-  values: Config;
+  project: Project;
   pages: Signal<HTMLElement[]>;
   imageSheets: ImageSheet[];
 };
 
-const PreviewImage = component$<{ values: Config; imageLayout: ImageSheet["imageLayouts"][number] }>(
-  ({ values, imageLayout }) => {
+const PreviewImage = component$<{ project: Project; imageLayout: ImageSheet["imageLayouts"][number] }>(
+  ({ project, imageLayout }) => {
     const src = useSignal<string | null>(null);
 
     useVisibleTask$(({ cleanup }) => {
@@ -27,9 +28,9 @@ const PreviewImage = component$<{ values: Config; imageLayout: ImageSheet["image
         style={{
           opacity: src.value ? 1 : 0,
           position: "absolute",
-          left: `calc(${imageLayout.x} / ${values.page.width} * 100%)`,
-          marginTop: `calc(${imageLayout.y} / ${values.page.width} * 100%)`, // use margin for percentage of width
-          width: `calc(${imageLayout.width} / ${values.page.width} * 100%)`,
+          left: `calc(${imageLayout.x} / ${project.width} * 100%)`,
+          marginTop: `calc(${imageLayout.y} / ${project.width} * 100%)`, // use margin for percentage of width
+          width: `calc(${imageLayout.width} / ${project.width} * 100%)`,
           aspectRatio: `${imageLayout.width} / ${imageLayout.height}`,
         }}
       />
@@ -37,7 +38,7 @@ const PreviewImage = component$<{ values: Config; imageLayout: ImageSheet["image
   }
 );
 
-export const Preview = component$(({ values, imageSheets, ...props }: PreviewProps) => {
+export const Preview = component$(({ project, imageSheets, ...props }: PreviewProps) => {
   return (
     <div
       style={{
@@ -61,17 +62,17 @@ export const Preview = component$(({ values, imageSheets, ...props }: PreviewPro
             style={{
               display: "inline-block",
               width: "100%",
-              aspectRatio: `${values.page.width} / ${values.page.height}`,
+              aspectRatio: `${project.width} / ${project.height}`,
               minHeight: 0,
               position: "relative",
-              marginTop: index > 0 ? `calc(0.5 / ${values.page.width} * 100%)` : "0", // use margin to simulate inches based off width (margin-top is based off width)
+              marginTop: index > 0 ? `calc(0.5 / ${project.width} * 100%)` : "0", // use margin to simulate inches based off width (margin-top is based off width)
             }}
             ref={(page) => {
               props.pages.value[index] = page as HTMLElement;
             }}
           >
             {imageLayouts.map((imageLayout) => {
-              return <PreviewImage key={imageLayout.photo.id} values={values} imageLayout={imageLayout} />;
+              return <PreviewImage key={imageLayout.photo.id} project={project} imageLayout={imageLayout} />;
             })}
           </div>
         );

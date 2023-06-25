@@ -1,4 +1,4 @@
-import { component$, useSignal, useStore, $, useComputed$, Signal } from "@builder.io/qwik";
+import { component$, useSignal, useStore, $, useComputed$, Signal, useVisibleTask$ } from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import exifreader from "exifreader";
@@ -6,13 +6,14 @@ import { css } from "~/panda/css";
 import { MobileTabs } from "~/components/MobileTabs";
 import { Preview } from "~/components/preview/Preview";
 import { Photos } from "~/components/photos/Photos";
-import { Photo } from "~/database/sources/photo";
+import { Photo } from "~/database/tables/photo";
 import { useHistoryState } from "~/hooks/useHistoryState";
 import { Navigation } from "~/components/Navigation";
 import slugify from "@sindresorhus/slugify";
 import { db } from "~/database/main";
 import { useLiveQuery$ } from "~/database/hooks";
-import { getSourceImage } from "~/database/sources/image";
+import { getSourceImage } from "~/database/tables/image";
+import { Project } from "~/database/tables/project";
 
 export type Config = {
   page: {
@@ -29,12 +30,12 @@ export type ImageSheet = ReturnType<typeof useImageSheets>["value"][number];
 // -
 // -
 
-function useImageSheets(config: Config, photos: Signal<Photo[]>) {
+function useImageSheets(project: Signal<Project>, photos: Signal<Photo[]>) {
   return useComputed$(() => {
-    const packer = new MaxRectsPacker(config.page.width, config.page.height, config.page.margin, {
+    const packer = new MaxRectsPacker(project.value.width, project.value.height, project.value.gap, {
       allowRotation: false, // TODO: optimization
       smart: false,
-      border: config.page.padding,
+      border: project.value.margin,
     });
 
     packer.addArray(
@@ -60,24 +61,23 @@ function useImageSheets(config: Config, photos: Signal<Photo[]>) {
   });
 }
 
-const Content = component$<{ photos: Photo[] }>(({ photos }) => {
+const Content = component$<{ project: Project; photos: Photo[] }>(({ project, photos }) => {
   const tab = useHistoryState<"Photos" | "Preview">("tab", "Preview");
-  const projectName = "Lucy’s day at the beach";
 
-  const config: Config = useStore({
-    page: {
-      width: 8.5,
-      height: 11,
-      margin: 0.25,
-      padding: 0.5,
-    },
-  });
+  // const config: Config = useStore({
+  //   page: {
+  //     width: 8.5,
+  //     height: 11,
+  //     margin: 0.25,
+  //     padding: 0.5,
+  //   },
+  // });
 
   const pages = useSignal<HTMLElement[]>([]);
 
   const imageSheets = useImageSheets(
-    config,
     // it seems a signal is needed to rerun use computed here?
+    useComputed$(() => project),
     useComputed$(() => photos)
   );
 
@@ -87,7 +87,7 @@ const Content = component$<{ photos: Photo[] }>(({ photos }) => {
     const doc = new jsPDF({
       unit: "in",
       orientation: "p",
-      format: [config.page.width, config.page.height],
+      format: [project.width, project.height],
     });
 
     doc.deletePage(1);
@@ -124,7 +124,7 @@ const Content = component$<{ photos: Photo[] }>(({ photos }) => {
       }
     }
 
-    doc.save(`${slugify(projectName, { customReplacements: [["’", ""]] })}.pdf`);
+    doc.save(`${slugify(project.name, { customReplacements: [["’", ""]] })}.pdf`);
     objectUrlsToRevoke.forEach((url) => URL.revokeObjectURL(url));
   });
 
@@ -154,7 +154,7 @@ const Content = component$<{ photos: Photo[] }>(({ photos }) => {
               lineHeight: "tight",
             })}
           >
-            {projectName}
+            {project.name}
           </h1>
           <MobileTabs activeTab={tab} />
         </div>
@@ -172,10 +172,10 @@ const Content = component$<{ photos: Photo[] }>(({ photos }) => {
         <Navigation onDownload={download} />
         <div>
           <div hidden={tab.value !== "Photos"}>
-            <Photos config={config} photos={photos} />
+            <Photos project={project} photos={photos} />
           </div>
           <div hidden={tab.value !== "Preview"}>
-            <Preview values={config} imageSheets={imageSheets.value} pages={pages} />
+            <Preview project={project} imageSheets={imageSheets.value} pages={pages} />
           </div>
         </div>
       </div>
@@ -184,11 +184,32 @@ const Content = component$<{ photos: Photo[] }>(({ photos }) => {
 });
 
 export default component$(() => {
-  const photos = useLiveQuery$(() => db.photos.toArray());
+  // use project id from query param or something to fetch both of the following
+  const id = `project-0`;
 
-  if (photos.isLoading) {
+  useVisibleTask$(() => {
+    db.projects.count().then((count) => {
+      if (count === 0) {
+        db.projects.add({
+          id,
+          width: 8.5,
+          height: 11,
+          margin: 0.5,
+          gap: 0.25,
+          createdAt: new Date(),
+          name: "Test",
+          unit: "in",
+        });
+      }
+    });
+  });
+
+  const project = useLiveQuery$(() => () => db.projects.where({ id }).first());
+  const photos = useLiveQuery$(() => () => db.photos.where({ projectId: id }).toArray());
+
+  if (photos.isLoading || project.isLoading) {
     return <>Loading...</>;
   }
 
-  return <Content photos={photos.value} />;
+  return <Content photos={photos.value} project={project.value!} />;
 });

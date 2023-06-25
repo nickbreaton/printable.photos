@@ -1,21 +1,24 @@
 import Dexie from "dexie";
-import { Image } from "~/database/sources/image";
-import { Photo } from "~/database/sources/photo";
+import { Image } from "~/database/tables/image";
+import { Photo } from "~/database/tables/photo";
+import { Project } from "./tables/project";
 
 class Database extends Dexie {
   photos!: Dexie.Table<Photo, Photo["id"]>;
   images!: Dexie.Table<Image, Image["id"]>;
+  projects!: Dexie.Table<Project, Project["id"]>;
 
   constructor() {
-    super("Database3");
+    super("Database6");
 
-    this.version(1).stores({
-      photos: "id,name,aspectRatio,width,unit,createdAt",
+    this.version(2).stores({
+      projects: "id",
+      photos: "id,projectId,name,aspectRatio,width,unit,createdAt",
       images: "id,photoId,type,devicePixelRatio,[photoId+type]",
     });
 
-    this.photos.hook("deleting", async (id, _, trans) => {
-      trans.on("complete", () => db.images.where("photoId").equals(id).delete());
+    this.photos.hook("deleting", async (id, _, tx) => {
+      tx.on("complete", () => db.images.where("photoId").equals(id).delete());
     });
   }
 }
