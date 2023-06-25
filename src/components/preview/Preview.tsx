@@ -1,5 +1,5 @@
 import { Signal, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
-import { getSourceImageSource } from "~/data/sources/image";
+import { getSourceImage } from "~/database/sources/image";
 import { css } from "~/panda/css";
 import { Config, ImageSheet } from "~/routes";
 
@@ -14,12 +14,10 @@ const PreviewImage = component$<{ values: Config; imageLayout: ImageSheet["image
     const src = useSignal<string | null>(null);
 
     useVisibleTask$(({ cleanup }) => {
-      const unsub = getSourceImageSource(imageLayout.photo.id).subscribe(({ blob }) => {
-        src.value = URL.createObjectURL(blob);
-        unsub(); // only needed once
-        cleanup(() => URL.revokeObjectURL(src.value!));
+      getSourceImage(imageLayout.photo.id).then((url) => {
+        src.value = url.src;
+        cleanup(() => URL.revokeObjectURL(url.src));
       });
-      cleanup(unsub);
     });
 
     return (

@@ -1,8 +1,8 @@
 import { component$ } from "@builder.io/qwik";
 import { Config } from "~/routes";
 import { css } from "~/panda/css";
-import { Photo, PhotoId, deletePhoto, putPhoto } from "~/data/sources/photo";
-import { addImage } from "~/data/sources/image";
+import { Photo, PhotoId } from "~/database/sources/photo";
+import { db } from "~/database/main";
 
 export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos }) => {
   return (
@@ -26,22 +26,24 @@ export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos 
 
           const photoId: PhotoId = `photo-${crypto.randomUUID()}`;
 
-          // TODO: parallelize, use same transaction
+          await db.transaction("rw", db.photos, db.images, async () => {
+            const photoAddition = db.photos.add({
+              id: photoId,
+              name: file.name,
+              aspectRatio,
+              width: 4,
+              unit: "inches",
+              createdAt: new Date(),
+            });
 
-          await putPhoto({
-            id: photoId,
-            name: file.name,
-            aspectRatio,
-            width: 4,
-            unit: "inches",
-            createdAt: new Date(),
-          });
+            const imageAddition = db.images.add({
+              type: "source",
+              id: `image-${crypto.randomUUID()}`,
+              blob,
+              photoId,
+            });
 
-          await addImage({
-            type: "source",
-            id: `image-${crypto.randomUUID()}`,
-            blob,
-            photoId,
+            return Promise.all([photoAddition, imageAddition]);
           });
         }}
       >
@@ -58,10 +60,10 @@ export const Photos = component$<{ config: Config; photos: Photo[] }>(({ photos 
               placeholder="width"
               value={photo.width}
               onChange$={(event) => {
-                putPhoto({ ...photo, width: parseFloat(event.target.value) });
+                db.photos.put({ ...photo, width: parseFloat(event.target.value) });
               }}
             />
-            <button onClick$={() => deletePhoto(photo.id)}>Delete</button>
+            <button onClick$={() => db.photos.delete(photo.id)}>Delete</button>
           </div>
         ))}
       </div>

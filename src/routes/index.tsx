@@ -1,4 +1,4 @@
-import { component$, useComputed$, useSignal, useStore, $ } from "@builder.io/qwik";
+import { component$, useSignal, useStore, $ } from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import exifreader from "exifreader";
@@ -6,12 +6,13 @@ import { css } from "~/panda/css";
 import { MobileTabs } from "~/components/MobileTabs";
 import { Preview } from "~/components/preview/Preview";
 import { Photos } from "~/components/photos/Photos";
-import { Photo, getPhotosSource } from "~/data/sources/photo";
+import { Photo } from "~/database/sources/photo";
 import { useHistoryState } from "~/hooks/useHistoryState";
 import { Navigation } from "~/components/Navigation";
 import slugify from "@sindresorhus/slugify";
-import { useDataSource } from "~/data/datasource";
-import { getSourceImageSource } from "~/data/sources/image";
+import { db } from "~/database/main";
+import { useLiveQuery$ } from "~/database/hooks";
+import { getSourceImage } from "~/database/sources/image";
 
 export type Config = {
   page: {
@@ -89,14 +90,9 @@ const Content = component$<{ photos: Photo[] }>(({ photos }) => {
       doc.addPage();
 
       for (const image of sheet.imageLayouts) {
-        const blob = await new Promise<Blob>((resolve) => {
-          getSourceImageSource(image.photo.id).subscribe((image) => {
-            resolve(image.blob);
-          });
-        });
+        const { blob, src } = await getSourceImage(image.photo.id);
 
         const data = exifreader.load(await blob.arrayBuffer());
-        const src = URL.createObjectURL(blob);
         objectUrlsToRevoke.push(src);
 
         switch (data.Orientation?.value) {
@@ -182,7 +178,7 @@ const Content = component$<{ photos: Photo[] }>(({ photos }) => {
 });
 
 export default component$(() => {
-  const photos = useDataSource($(() => getPhotosSource()));
+  const photos = useLiveQuery$(() => db.photos.toArray());
 
   if (photos.isLoading) {
     return <>Loading...</>;
