@@ -6,6 +6,7 @@
   },
   "private": true,
   "scripts": {
+    "prepare": "panda codegen",
     "db": "vite -c src.db/vite.config.ts src.db",
     "build": "qwik build",
     "build.client": "vite build",
