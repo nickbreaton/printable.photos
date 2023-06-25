@@ -169,8 +169,12 @@ const Content = component$<{ photos: Photo[] }>(({ photos }) => {
       >
         <Navigation onDownload={download} />
         <div>
-          {tab.value === "Photos" && <Photos config={config} photos={photos} />}
-          {tab.value === "Preview" && <Preview values={config} imageSheets={imageSheets.value} pages={pages} />}
+          <div hidden={tab.value !== "Photos"}>
+            <Photos config={config} photos={photos} />
+          </div>
+          <div hidden={tab.value !== "Preview"}>
+            <Preview values={config} imageSheets={imageSheets.value} pages={pages} />
+          </div>
         </div>
       </div>
     </div>
