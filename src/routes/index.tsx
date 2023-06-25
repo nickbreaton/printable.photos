@@ -1,4 +1,4 @@
-import { component$, useSignal, useStore, $, useComputed$, Signal, useVisibleTask$ } from "@builder.io/qwik";
+import { component$, useSignal, $, useComputed$, Signal, useVisibleTask$ } from "@builder.io/qwik";
 import { jsPDF } from "jspdf";
 import { MaxRectsPacker, Rectangle } from "maxrects-packer";
 import exifreader from "exifreader";
