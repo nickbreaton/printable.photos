@@ -57,7 +57,8 @@
     "just-memoize": "^2.2.0",
     "maxrects-packer": "^2.7.3",
     "qwik-feather-icons": "^1.2.1",
-    "rad-event-listener": "^0.2.4"
+    "rad-event-listener": "^0.2.4",
+    "smartquotes": "^2.3.2"
   },
   "prettier": {
     "printWidth": 120

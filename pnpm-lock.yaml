@@ -32,6 +32,9 @@ dependencies:
   rad-event-listener:
     specifier: ^0.2.4
     version: 0.2.4
+  smartquotes:
+    specifier: ^2.3.2
+    version: 2.3.2
 
 devDependencies:
   '@babel/core':
@@ -5939,6 +5942,11 @@ packages:
     resolution: {integrity: sha512-3dOsAHXXUkQTpOYcoAxLIorMTp4gIQr5IW3iVb7A7lFIp0VHhnynm9izx6TssdrIcVIESAlVjtnO2K8bg+Coew==}
     engines: {node: '>=12'}
     dev: true
+
+  /smartquotes@2.3.2:
+    resolution: {integrity: sha512-0R6YJ5hLpDH4mZR7N5eZ12oCMLspvGOHL9A9SEm2e3b/CQmQidekW4SWSKEmor/3x6m3NCBBEqLzikcZC9VJNQ==}
+    engines: {node: '>=4.0.0'}
+    dev: false
 
   /source-map-js@1.0.2:
     resolution: {integrity: sha512-R0XvVJ9WusLiqTCEiGCmICCMplcCkIwwR11mOSD9CR5u+IXYdiseeEuXCVAjS54zqwkLcPNnmU4OeJ6tUrWhDw==}

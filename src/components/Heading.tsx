@@ -2,6 +2,7 @@ import { component$ } from "@builder.io/qwik";
 import { db } from "~/database/main";
 import { Project } from "~/database/tables/project";
 import { css } from "~/panda/css";
+import smartquotes from "smartquotes";
 
 const isValid = (name: string) => {
   return name.length > 0 && name.length < 256;
@@ -10,9 +11,10 @@ const isValid = (name: string) => {
 // TODO: consider just using an input element, see google docs as an example
 export const EditableHeading = component$<{ project: Project }>(({ project }) => {
   return (
-    <h1
+    <input
       aria-label="Project name"
       contentEditable="true"
+      value={project.name}
       class={css({
         w: "full",
         fontSize: "2xl",
@@ -20,6 +22,13 @@ export const EditableHeading = component$<{ project: Project }>(({ project }) =>
         outlineColor: "transparent",
         lineHeight: "tight",
       })}
+      onInput$={(event) => {
+        const target = event.target as HTMLInputElement;
+        const result = smartquotes(target.value);
+        if (result !== target.value) {
+          target.value = result;
+        }
+      }}
       onBlur$={(event) => {
         const next = event.target.textContent;
 
@@ -30,8 +39,6 @@ export const EditableHeading = component$<{ project: Project }>(({ project }) =>
 
         db.projects.where({ id: project.id }).modify({ name: next });
       }}
-    >
-      {project.name}
-    </h1>
+    />
   );
 });
