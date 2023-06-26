@@ -14,6 +14,7 @@ import { db } from "~/database/main";
 import { useLiveQuery$ } from "~/database/hooks";
 import { getSourceImage } from "~/database/tables/image";
 import { Project } from "~/database/tables/project";
+import { EditableHeading } from "~/components/Heading";
 
 export type Config = {
   page: {
@@ -72,8 +73,6 @@ const Content = component$<{ project: Project; photos: Photo[] }>(({ project, ph
   //     padding: 0.5,
   //   },
   // });
-
-  const pages = useSignal<HTMLElement[]>([]);
 
   const imageSheets = useImageSheets(
     // it seems a signal is needed to rerun use computed here?
@@ -145,17 +144,7 @@ const Content = component$<{ project: Project; photos: Photo[] }>(({ project, ph
         })}
       >
         <div class={css({ width: "xl", maxWidth: "11/12", display: "grid", gridGap: "4" })}>
-          <h1
-            class={css({
-              w: "full",
-              fontSize: "2xl",
-              fontWeight: "extrabold",
-              outlineColor: "transparent",
-              lineHeight: "tight",
-            })}
-          >
-            {project.name}
-          </h1>
+          <EditableHeading project={project} />
           <MobileTabs activeTab={tab} />
         </div>
       </div>
@@ -175,7 +164,7 @@ const Content = component$<{ project: Project; photos: Photo[] }>(({ project, ph
             <Photos project={project} photos={photos} />
           </div>
           <div hidden={tab.value !== "Preview"}>
-            <Preview project={project} imageSheets={imageSheets.value} pages={pages} />
+            <Preview project={project} imageSheets={imageSheets.value} />
           </div>
         </div>
       </div>
@@ -208,7 +197,7 @@ export default component$(() => {
   const photos = useLiveQuery$(() => () => db.photos.where({ projectId: id }).toArray());
 
   if (photos.isLoading || project.isLoading) {
-    return <>Loading...</>;
+    return null; // TODO: handle this better
   }
 
   return <Content photos={photos.value} project={project.value!} />;

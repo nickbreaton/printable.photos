@@ -1,4 +1,4 @@
-import { Signal, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import { component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 import { getSourceImage } from "~/database/tables/image";
 import { Project } from "~/database/tables/project";
 import { css } from "~/panda/css";
@@ -6,7 +6,6 @@ import { ImageSheet } from "~/routes";
 
 type PreviewProps = {
   project: Project;
-  pages: Signal<HTMLElement[]>;
   imageSheets: ImageSheet[];
 };
 
@@ -38,7 +37,7 @@ const PreviewImage = component$<{ project: Project; imageLayout: ImageSheet["ima
   }
 );
 
-export const Preview = component$(({ project, imageSheets, ...props }: PreviewProps) => {
+export const Preview = component$(({ project, imageSheets }: PreviewProps) => {
   return (
     <div
       style={{
@@ -66,9 +65,6 @@ export const Preview = component$(({ project, imageSheets, ...props }: PreviewPr
               minHeight: 0,
               position: "relative",
               marginTop: index > 0 ? `calc(0.5 / ${project.width} * 100%)` : "0", // use margin to simulate inches based off width (margin-top is based off width)
-            }}
-            ref={(page) => {
-              props.pages.value[index] = page as HTMLElement;
             }}
           >
             {imageLayouts.map((imageLayout) => {
