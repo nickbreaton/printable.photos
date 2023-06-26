@@ -23,6 +23,6 @@
       "~/panda/*": ["./.panda/*"]
     }
   },
-  "files": ["./.eslintrc.cjs", "./global.d.ts"],
+  "files": ["./.eslintrc.cjs"],
   "include": ["src", "./*.d.ts", "src.db"]
 }
