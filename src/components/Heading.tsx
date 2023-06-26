@@ -30,10 +30,10 @@ export const EditableHeading = component$<{ project: Project }>(({ project }) =>
         }
       }}
       onBlur$={(event) => {
-        const next = event.target.textContent;
+        const next = event.target.value;
 
         if (!isValid(next ?? "")) {
-          event.target.textContent = project.name;
+          event.target.value = project.name;
           return;
         }
 
