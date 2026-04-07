@@ -9,8 +9,11 @@
     "preview": "vp preview"
   },
   "devDependencies": {
+    "@solidjs/web": "2.0.0-beta.5",
+    "solid-js": "2.0.0-beta.5",
     "typescript": "~6.0.2",
     "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+    "vite-plugin-solid": "3.0.0-next.4",
     "vite-plus": "latest"
   },
   "overrides": {
