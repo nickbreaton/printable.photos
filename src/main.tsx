@@ -1,8 +1,37 @@
 import { render } from "@solidjs/web";
 
 import "./style.css";
-import { createMemo, createStore, For, Loading } from "solid-js";
-import { MaxRectsPacker } from "maxrects-packer";
+import { createMemo, createStore, For, Loading, type JSX } from "solid-js";
+import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
+
+function toPercent(value: number, total: number) {
+  return (value / total) * 100 + "%";
+}
+
+function getPhotoStyle(
+  rect: Rectangle,
+  paper: { width: number; height: number },
+): JSX.CSSProperties {
+  if (!rect.rot) {
+    return {
+      position: "absolute",
+      top: toPercent(rect.y, paper.height),
+      left: toPercent(rect.x, paper.width),
+      width: toPercent(rect.width, paper.width),
+      height: toPercent(rect.height, paper.height),
+    };
+  }
+
+  return {
+    position: "absolute",
+    top: toPercent(rect.y + rect.height / 2, paper.height),
+    left: toPercent(rect.x + rect.width / 2, paper.width),
+    width: toPercent(rect.height, paper.width),
+    height: toPercent(rect.width, paper.height),
+    transform: "translate(-50%, -50%) rotate(90deg)",
+    "transform-origin": "center",
+  };
+}
 
 function createImage(src: string) {
   return createMemo(() => {
@@ -23,8 +52,8 @@ function App() {
   const [paper] = createStore({
     width: 8.5,
     height: 11,
-    margin: 0.1,
-    gap: 0.3,
+    margin: 0,
+    gap: 0,
     units: "inches",
   });
 
@@ -39,7 +68,7 @@ function App() {
       smart: false,
       pot: false,
       square: false,
-      // allowRotation: true,
+      allowRotation: false,
     });
 
     const addImage = (image: HTMLImageElement) => {
@@ -70,13 +99,7 @@ function App() {
                   <img
                     class="photo"
                     src={rect().data.src}
-                    style={{
-                      position: "absolute",
-                      top: (rect().y / paper.height) * 100 + "%",
-                      left: (rect().x / paper.width) * 100 + "%",
-                      width: (rect().width / paper.width) * 100 + "%",
-                      height: (rect().height / paper.height) * 100 + "%",
-                    }}
+                    style={getPhotoStyle(rect(), paper)}
                   />
                 )}
               </For>
