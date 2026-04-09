@@ -50,16 +50,16 @@ function App() {
   const image3 = createImage("/fixtures/image3.jpg");
 
   const [paper] = createStore({
-    width: 8.5,
-    height: 11,
-    margin: 0,
-    gap: 0,
-    units: "inches",
+    width: 5,
+    height: 7,
+    margin: 0.25,
+    gap: 0.25,
+    units: "in",
   });
 
   const [imageConfig] = createStore({
-    width: 4,
-    units: "inches",
+    width: 1.5,
+    units: "in",
   });
 
   const bins = createMemo(() => {
@@ -92,7 +92,10 @@ function App() {
           {(bin) => (
             <div
               class="page"
-              style={{ "aspect-ratio": paper.width / paper.height }}
+              style={{
+                "aspect-ratio": paper.width / paper.height,
+                "max-width": paper.width + paper.units,
+              }}
             >
               <For each={bin().rects}>
                 {(rect) => (
