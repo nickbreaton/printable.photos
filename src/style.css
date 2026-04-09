@@ -39,9 +39,16 @@ body {
 }
 
 .page {
+  position: relative;
+  overflow: hidden;
   background: #444;
   max-width: 52rem;
   width: 100%;
   margin: auto;
-  display: flex;
+  border: 1px solid #666;
+}
+
+.photo {
+  display: block;
+  object-fit: cover;
 }

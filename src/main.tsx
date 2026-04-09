@@ -23,6 +23,8 @@ function App() {
   const [paper] = createStore({
     width: 8.5,
     height: 11,
+    margin: 0.1,
+    gap: 0.3,
     units: "inches",
   });
 
@@ -32,15 +34,24 @@ function App() {
   });
 
   const bins = createMemo(() => {
-    const packer = new MaxRectsPacker(paper.width, paper.height, 0, {
+    const packer = new MaxRectsPacker(paper.width, paper.height, paper.gap, {
+      border: paper.margin,
+      smart: false,
+      pot: false,
+      square: false,
       // allowRotation: true,
     });
-    const image = image1();
-    const aspectRatio = image.height / image.width;
-    const proportionalHeight = imageConfig.width * aspectRatio;
-    packer.add(imageConfig.width, proportionalHeight, null);
-    packer.add(imageConfig.width, proportionalHeight, null);
-    packer.add(imageConfig.width, proportionalHeight, null);
+
+    const addImage = (image: HTMLImageElement) => {
+      const aspectRatio = image.height / image.width;
+      const proportionalHeight = imageConfig.width * aspectRatio;
+      packer.add(imageConfig.width, proportionalHeight, { src: image.src });
+    };
+
+    addImage(image1());
+    addImage(image2());
+    addImage(image3());
+
     return packer.bins;
   });
 
@@ -57,8 +68,10 @@ function App() {
               <For each={bin().rects}>
                 {(rect) => (
                   <img
-                    src={image1().src}
+                    class="photo"
+                    src={rect().data.src}
                     style={{
+                      position: "absolute",
                       top: (rect().y / paper.height) * 100 + "%",
                       left: (rect().x / paper.width) * 100 + "%",
                       width: (rect().width / paper.width) * 100 + "%",
