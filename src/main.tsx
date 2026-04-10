@@ -58,7 +58,7 @@ function App() {
   });
 
   const [imageConfig] = createStore({
-    width: 1.5,
+    width: 3,
     units: "in",
   });
 
@@ -86,7 +86,15 @@ function App() {
 
   return (
     <Loading>
-      {console.log(bins()) ?? ""}
+      <style>
+        {
+          /* css */ `
+          @page {
+            size: ${paper.width}${paper.units} ${paper.height}${paper.units};
+            margin: 0;
+          }`
+        }
+      </style>
       <div class="pages">
         <For each={bins()}>
           {(bin) => (
@@ -94,7 +102,7 @@ function App() {
               class="page"
               style={{
                 "aspect-ratio": paper.width / paper.height,
-                "max-width": paper.width + paper.units,
+                "--page-width": paper.width + paper.units,
               }}
             >
               <For each={bin().rects}>
