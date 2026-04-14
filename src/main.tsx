@@ -44,46 +44,84 @@ function createImage(src: string) {
   });
 }
 
+const [paper, setPaper] = createStore({
+  width: 5,
+  height: 7,
+  margin: 0.25,
+  gap: 0.25,
+  units: "in",
+});
+
+const [imageConfig] = createStore({
+  width: 3,
+  units: "in",
+});
+
+const image1 = createImage("/fixtures/image1.jpg");
+const image2 = createImage("/fixtures/image2.jpg");
+const image3 = createImage("/fixtures/image3.jpg");
+
+const bins = createMemo(() => {
+  const packer = new MaxRectsPacker(paper.width, paper.height, paper.gap, {
+    border: paper.margin,
+    smart: false,
+    pot: false,
+    square: false,
+    allowRotation: false,
+  });
+
+  const addImage = (image: HTMLImageElement) => {
+    const aspectRatio = image.height / image.width;
+    const proportionalHeight = imageConfig.width * aspectRatio;
+    packer.add(imageConfig.width, proportionalHeight, { src: image.src });
+  };
+
+  addImage(image1());
+  addImage(image2());
+  addImage(image3());
+
+  return packer.bins;
+});
+
+function Sidebar() {
+  return (
+    <fieldset>
+      <label>
+        Margin: <input type="number" step={0.25} />
+      </label>
+    </fieldset>
+  );
+}
+
+function Pages() {
+  return (
+    <div class="pages">
+      <For each={bins()}>
+        {(bin) => (
+          <div
+            class="page"
+            style={{
+              "aspect-ratio": paper.width / paper.height,
+              "--page-width": paper.width + paper.units,
+            }}
+          >
+            <For each={bin().rects}>
+              {(rect) => (
+                <img
+                  class="photo"
+                  src={rect().data.src}
+                  style={getPhotoStyle(rect(), paper)}
+                />
+              )}
+            </For>
+          </div>
+        )}
+      </For>
+    </div>
+  );
+}
+
 function App() {
-  const image1 = createImage("/fixtures/image1.jpg");
-  const image2 = createImage("/fixtures/image2.jpg");
-  const image3 = createImage("/fixtures/image3.jpg");
-
-  const [paper] = createStore({
-    width: 5,
-    height: 7,
-    margin: 0.25,
-    gap: 0.25,
-    units: "in",
-  });
-
-  const [imageConfig] = createStore({
-    width: 3,
-    units: "in",
-  });
-
-  const bins = createMemo(() => {
-    const packer = new MaxRectsPacker(paper.width, paper.height, paper.gap, {
-      border: paper.margin,
-      smart: false,
-      pot: false,
-      square: false,
-      allowRotation: false,
-    });
-
-    const addImage = (image: HTMLImageElement) => {
-      const aspectRatio = image.height / image.width;
-      const proportionalHeight = imageConfig.width * aspectRatio;
-      packer.add(imageConfig.width, proportionalHeight, { src: image.src });
-    };
-
-    addImage(image1());
-    addImage(image2());
-    addImage(image3());
-
-    return packer.bins;
-  });
-
   return (
     <Loading>
       <style>
@@ -95,29 +133,8 @@ function App() {
           }`
         }
       </style>
-      <div class="pages">
-        <For each={bins()}>
-          {(bin) => (
-            <div
-              class="page"
-              style={{
-                "aspect-ratio": paper.width / paper.height,
-                "--page-width": paper.width + paper.units,
-              }}
-            >
-              <For each={bin().rects}>
-                {(rect) => (
-                  <img
-                    class="photo"
-                    src={rect().data.src}
-                    style={getPhotoStyle(rect(), paper)}
-                  />
-                )}
-              </For>
-            </div>
-          )}
-        </For>
-      </div>
+      <Sidebar />
+      <Pages />
     </Loading>
   );
 }

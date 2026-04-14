@@ -54,11 +54,10 @@ body {
 .page {
   position: relative;
   overflow: hidden;
-  background: #444;
+  background: #ccc;
   max-width: var(--page-width);
   width: 100%;
   margin: auto;
-  border: 1px solid #666;
 
   @media print {
     width: var(--page-width);
