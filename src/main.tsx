@@ -54,7 +54,6 @@ const [paper, setPaper] = createStore({
 
 const [imageConfig] = createStore({
   width: 3,
-  units: "in",
 });
 
 const image1 = createImage("/fixtures/image1.jpg");
@@ -87,7 +86,65 @@ function Sidebar() {
   return (
     <fieldset>
       <label>
-        Margin: <input type="number" step={0.25} />
+        Width:{" "}
+        <input
+          type="number"
+          step={1}
+          value={paper.width}
+          onChange={(e) =>
+            setPaper((paper) => void (paper.width = e.target.valueAsNumber))
+          }
+        />
+      </label>
+      <label>
+        Height:{" "}
+        <input
+          type="number"
+          step={1}
+          value={paper.height}
+          onChange={(e) =>
+            setPaper((paper) => void (paper.height = e.target.valueAsNumber))
+          }
+        />
+      </label>
+      <label>
+        Margin:{" "}
+        <input
+          type="number"
+          step={0.25}
+          value={paper.margin}
+          onChange={(e) =>
+            setPaper((paper) => void (paper.margin = e.target.valueAsNumber))
+          }
+        />
+      </label>
+      <label>
+        Gap:{" "}
+        <input
+          type="number"
+          step={0.25}
+          value={paper.gap}
+          onChange={(e) =>
+            setPaper((paper) => void (paper.gap = e.target.valueAsNumber))
+          }
+        />
+      </label>
+      <label>
+        Units:{" "}
+        <select
+          value={paper.units}
+          onChange={(e) =>
+            setPaper(
+              (paper) => void (paper.units = e.target.value as "in" | "mm"),
+            )
+          }
+          disabled={
+            true /* keep as inches until doing something smart for keeping same size but different units on selection */
+          }
+        >
+          <option value="in">Inches</option>
+          <option value="mm">Millimeters</option>
+        </select>
       </label>
     </fieldset>
   );
