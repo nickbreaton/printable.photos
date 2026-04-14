@@ -52,7 +52,7 @@ const [paper, setPaper] = createStore({
   units: "in",
 });
 
-const [imageConfig] = createStore({
+const [imageConfig, setImageConfig] = createStore({
   width: 3,
 });
 
@@ -101,96 +101,114 @@ const selectedPaperPreset = createMemo(() => {
 
 function Sidebar() {
   return (
-    <fieldset>
-      <label>
-        Paper:{" "}
-        <select
-          value={selectedPaperPreset()}
-          onChange={(e) => {
-            const selectedPreset = PAPER_PRESETS.find(
-              (preset) => preset.value === e.target.value,
-            );
+    <>
+      <fieldset>
+        <label>
+          Paper:{" "}
+          <select
+            value={selectedPaperPreset()}
+            onChange={(e) => {
+              const selectedPreset = PAPER_PRESETS.find(
+                (preset) => preset.value === e.target.value,
+              );
 
-            if (!selectedPreset) {
-              return;
+              if (!selectedPreset) {
+                return;
+              }
+
+              setPaper((paper) => {
+                paper.width = selectedPreset.width;
+                paper.height = selectedPreset.height;
+              });
+            }}
+          >
+            <option value="Custom">Custom</option>
+            <For each={PAPER_PRESETS}>
+              {(preset) => (
+                <option value={preset().value}>{preset().label}</option>
+              )}
+            </For>
+          </select>
+        </label>
+        <label>
+          Width:{" "}
+          <input
+            type="number"
+            step={1}
+            value={paper.width}
+            onChange={(e) =>
+              setPaper((paper) => void (paper.width = e.target.valueAsNumber))
             }
-
-            setPaper((paper) => {
-              paper.width = selectedPreset.width;
-              paper.height = selectedPreset.height;
-            });
-          }}
-        >
-          <option value="Custom">Custom</option>
-          <For each={PAPER_PRESETS}>
-            {(preset) => (
-              <option value={preset().value}>{preset().label}</option>
-            )}
-          </For>
-        </select>
-      </label>
-      <label>
-        Width:{" "}
-        <input
-          type="number"
-          step={1}
-          value={paper.width}
-          onChange={(e) =>
-            setPaper((paper) => void (paper.width = e.target.valueAsNumber))
-          }
-        />
-      </label>
-      <label>
-        Height:{" "}
-        <input
-          type="number"
-          step={1}
-          value={paper.height}
-          onChange={(e) =>
-            setPaper((paper) => void (paper.height = e.target.valueAsNumber))
-          }
-        />
-      </label>
-      <label>
-        Margin:{" "}
-        <input
-          type="number"
-          step={0.25}
-          value={paper.margin}
-          onChange={(e) =>
-            setPaper((paper) => void (paper.margin = e.target.valueAsNumber))
-          }
-        />
-      </label>
-      <label>
-        Gap:{" "}
-        <input
-          type="number"
-          step={0.25}
-          value={paper.gap}
-          onChange={(e) =>
-            setPaper((paper) => void (paper.gap = e.target.valueAsNumber))
-          }
-        />
-      </label>
-      <label>
-        Units:{" "}
-        <select
-          value={paper.units}
-          onChange={(e) =>
-            setPaper(
-              (paper) => void (paper.units = e.target.value as "in" | "mm"),
-            )
-          }
-          disabled={
-            true /* keep as inches until doing something smart for keeping same size but different units on selection */
-          }
-        >
-          <option value="in">Inches</option>
-          <option value="mm">Millimeters</option>
-        </select>
-      </label>
-    </fieldset>
+          />
+        </label>
+        <label>
+          Height:{" "}
+          <input
+            type="number"
+            step={1}
+            value={paper.height}
+            onChange={(e) =>
+              setPaper((paper) => void (paper.height = e.target.valueAsNumber))
+            }
+          />
+        </label>
+        <label>
+          Margin:{" "}
+          <input
+            type="number"
+            step={0.25}
+            value={paper.margin}
+            onChange={(e) =>
+              setPaper((paper) => void (paper.margin = e.target.valueAsNumber))
+            }
+          />
+        </label>
+        <label>
+          Gap:{" "}
+          <input
+            type="number"
+            step={0.25}
+            value={paper.gap}
+            onChange={(e) =>
+              setPaper((paper) => void (paper.gap = e.target.valueAsNumber))
+            }
+          />
+        </label>
+        <label>
+          Units:{" "}
+          <select
+            value={paper.units}
+            onChange={(e) =>
+              setPaper(
+                (paper) => void (paper.units = e.target.value as "in" | "mm"),
+              )
+            }
+            disabled={
+              true /* keep as inches until doing something smart for keeping same size but different units on selection */
+            }
+          >
+            <option value="in">Inches</option>
+            <option value="mm">Millimeters</option>
+          </select>
+        </label>
+      </fieldset>
+      <fieldset>
+        <label>
+          Image width:{" "}
+          <input
+            type="number"
+            step={1}
+            value={imageConfig.width}
+            onChange={(e) =>
+              setImageConfig(
+                (imageConfig) =>
+                  void (imageConfig.width = e.target.valueAsNumber),
+              )
+            }
+          />
+        </label>
+      </fieldset>
+    </>
   );
 }
 
