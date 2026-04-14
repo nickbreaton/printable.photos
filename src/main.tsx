@@ -45,8 +45,8 @@ function createImage(src: string) {
 }
 
 const [paper, setPaper] = createStore({
-  width: 5,
-  height: 7,
+  width: 8.5,
+  height: 11,
   margin: 0.25,
   gap: 0.25,
   units: "in",
@@ -55,6 +55,15 @@ const [paper, setPaper] = createStore({
 const [imageConfig] = createStore({
   width: 3,
 });
+
+const PAPER_PRESETS = [
+  { label: "4x6", value: "4x6", width: 4, height: 6 },
+  { label: "5x7", value: "5x7", width: 5, height: 7 },
+  { label: "8x10", value: "8x10", width: 8, height: 10 },
+  { label: "Letter", value: "Letter", width: 8.5, height: 11 },
+  { label: "Legal", value: "Legal", width: 8.5, height: 14 },
+  { label: "Tabloid", value: "Tabloid", width: 11, height: 17 },
+] as const;
 
 const image1 = createImage("/fixtures/image1.jpg");
 const image2 = createImage("/fixtures/image2.jpg");
@@ -82,9 +91,44 @@ const bins = createMemo(() => {
   return packer.bins;
 });
 
+const selectedPaperPreset = createMemo(() => {
+  const matchingPreset = PAPER_PRESETS.find((preset) => {
+    return preset.width === paper.width && preset.height === paper.height;
+  });
+
+  return matchingPreset?.value ?? "Custom";
+});
+
 function Sidebar() {
   return (
     <fieldset>
+      <label>
+        Paper:{" "}
+        <select
+          value={selectedPaperPreset()}
+          onChange={(e) => {
+            const selectedPreset = PAPER_PRESETS.find(
+              (preset) => preset.value === e.target.value,
+            );
+
+            if (!selectedPreset) {
+              return;
+            }
+
+            setPaper((paper) => {
+              paper.width = selectedPreset.width;
+              paper.height = selectedPreset.height;
+            });
+          }}
+        >
+          <option value="Custom">Custom</option>
+          <For each={PAPER_PRESETS}>
+            {(preset) => (
+              <option value={preset().value}>{preset().label}</option>
+            )}
+          </For>
+        </select>
+      </label>
       <label>
         Width:{" "}
         <input
