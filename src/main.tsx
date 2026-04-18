@@ -75,10 +75,6 @@ const PAPER_PRESETS = {
 
 const ALL_PAPER_PRESETS = Object.values(PAPER_PRESETS).flat();
 
-// const image1 = createImage("/fixtures/image1.jpg");
-// const image2 = createImage("/fixtures/image2.jpg");
-// const image3 = createImage("/fixtures/image3.jpg");
-
 const imageKeys = createMemo<string[]>(async () => {
   return await lf.keys();
 });
@@ -96,6 +92,8 @@ const bins = createMemo(async () => {
     smart: false,
     pot: false,
     square: false,
+    // TODO: when config has allowRotation run both paths and see if page count is still the same.
+    // If so prefer the path without rotation.
     allowRotation: paper.allowRotation,
   });
 
@@ -111,10 +109,6 @@ const bins = createMemo(async () => {
     const element = await createImage(url);
     addImage(element);
   }
-
-  // addImage(image1());
-  // addImage(image2());
-  // addImage(image3());
 
   return packer.bins;
 });
