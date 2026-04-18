@@ -41,7 +41,7 @@ body {
 .page {
   position: relative;
   overflow: hidden;
-  background: #ccc;
+  background: #444;
   width: 100%;
   margin: auto;
 }
