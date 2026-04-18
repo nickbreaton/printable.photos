@@ -3,7 +3,15 @@ import picaFactory from "pica";
 import { PDFDocument } from "pdf-lib";
 
 import "./style.css";
-import { createMemo, createStore, For, Loading, type JSX } from "solid-js";
+import {
+  createMemo,
+  createStore,
+  For,
+  Loading,
+  omit,
+  onCleanup,
+  type JSX,
+} from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 
 // @ts-ignore
@@ -79,7 +87,14 @@ const imageKeys = createMemo<string[]>(async () => {
   return await lf.keys();
 });
 
-const images = createMemo<{ file: File }[]>(async () => {
+interface StoredImage {
+  file: File;
+  width: number;
+  height: number;
+  name: string;
+}
+
+const images = createMemo<StoredImage[]>(async () => {
   const promises = imageKeys().map((key) => {
     return lf.getItem(key);
   });
@@ -97,17 +112,10 @@ const bins = createMemo(async () => {
     allowRotation: paper.allowRotation,
   });
 
-  const addImage = (image: HTMLImageElement) => {
+  for (const image of images()) {
     const aspectRatio = image.height / image.width;
     const proportionalHeight = imageConfig.width * aspectRatio;
-    packer.add(imageConfig.width, proportionalHeight, { src: image.src });
-  };
-
-  for (const image of images()) {
-    // TODO: probably creat ethe html element somewhere else / pass in limited props
-    const url = URL.createObjectURL(image.file);
-    const element = await createImage(url);
-    addImage(element);
+    packer.add(imageConfig.width, proportionalHeight, image);
   }
 
   return packer.bins;
@@ -131,21 +139,14 @@ async function downloadPdfFromCurrentLayout() {
     const page = pdf.addPage([pageWidthPt, pageHeightPt]);
 
     for (const rect of bin.rects) {
-      const src = rect.data.src as string;
-
-      const response = await fetch(src);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${src}`);
-      }
+      const { file } = rect.data as StoredImage;
 
       const placedWidthInches = toInches(rect.width);
       const placedHeightInches = toInches(rect.height);
       const targetPxW = Math.max(1, Math.ceil(placedWidthInches * 300));
       const targetPxH = Math.max(1, Math.ceil(placedHeightInches * 300));
 
-      const blob = await response.blob();
-      const sourceBitmap = await createImageBitmap(blob);
+      const sourceBitmap = await createImageBitmap(file);
 
       const sourceCanvas = document.createElement("canvas");
       sourceCanvas.width = sourceBitmap.width;
@@ -230,7 +231,7 @@ async function downloadPdfFromCurrentLayout() {
         pdfImageCanvas = rotatedCanvas;
       }
 
-      const mimeType = blob.type === "image/png" ? "image/png" : "image/jpeg";
+      const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
       const resizedBlob = await pica.toBlob(
         pdfImageCanvas,
         mimeType,
@@ -265,8 +266,6 @@ async function downloadPdfFromCurrentLayout() {
   const url = URL.createObjectURL(output);
 
   window.open(url, "_blank");
-
-  URL.revokeObjectURL(url);
 }
 
 const selectedPaperPreset = createMemo(() => {
@@ -405,11 +404,23 @@ function Sidebar() {
       <fieldset>
         <input
           type="file"
+          multiple
           onChange={async (event) => {
-            const file = event.target.files?.[0];
+            const files = event.target.files ?? [];
 
-            if (file) {
-              await lf.setItem(crypto.randomUUID(), { file });
+            // TODO: concurrency
+            for (const file of files) {
+              const url = URL.createObjectURL(file);
+              const img = await createImage(url);
+              const width = img.naturalWidth;
+              const height = img.naturalHeight;
+              const name = file.name;
+              await lf.setItem(crypto.randomUUID(), {
+                file,
+                width,
+                height,
+                name,
+              } satisfies StoredImage);
             }
 
             event.target.value = "";
@@ -431,6 +442,31 @@ function Sidebar() {
   );
 }
 
+function BlobImage(
+  props: JSX.ImgHTMLAttributes<HTMLImageElement> & { blob: Blob },
+) {
+  const el = createMemo(() => {
+    const url = URL.createObjectURL(props.blob);
+
+    onCleanup(() => {
+      URL.revokeObjectURL(url);
+    });
+
+    const img = (
+      <img {...omit(props, "blob")} src={url} />
+    ) as HTMLImageElement;
+
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      // Forces the load to begin (maybe theres a better way)
+      document.head.append(img);
+    });
+  });
+
+  return <>{el()}</>;
+}
+
 function Pages() {
   return (
     <div class="pages">
@@ -445,9 +481,9 @@ function Pages() {
           >
             <For each={bin().rects}>
               {(rect) => (
-                <img
+                <BlobImage
                   class="photo"
-                  src={rect().data.src}
+                  blob={rect().data.file}
                   style={getPhotoStyle(rect(), paper)}
                 />
               )}
