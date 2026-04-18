@@ -1,7 +1,14 @@
 import { render } from "@solidjs/web";
 
 import "./style.css";
-import { createMemo, createStore, For, Loading, type JSX } from "solid-js";
+import {
+  createMemo,
+  createSignal,
+  createStore,
+  For,
+  Loading,
+  type JSX,
+} from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 
 function toPercent(value: number, total: number) {
@@ -220,6 +227,9 @@ function Sidebar() {
           />
         </label>
       </fieldset>
+      <button type="button" class="download-button">
+        Download PDF
+      </button>
     </>
   );
 }
@@ -233,7 +243,7 @@ function Pages() {
             class="page"
             style={{
               "aspect-ratio": paper.width / paper.height,
-              "--page-width": paper.width + paper.units,
+              "max-width": paper.width + paper.units,
             }}
           >
             <For each={bin().rects}>

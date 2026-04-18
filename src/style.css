@@ -32,10 +32,6 @@ body {
   padding: 1.25rem;
 }
 
-#print-fallback {
-  display: none;
-}
-
 .pages {
   display: flex;
   flex-direction: column;
@@ -46,7 +42,6 @@ body {
   position: relative;
   overflow: hidden;
   background: #ccc;
-  max-width: var(--page-width);
   width: 100%;
   margin: auto;
 }
