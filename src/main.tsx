@@ -52,6 +52,7 @@ const [paper, setPaper] = createStore({
   margin: 0.25,
   gap: 0.25,
   units: "in",
+  allowRotation: false,
 });
 
 const [imageConfig, setImageConfig] = createStore({
@@ -83,7 +84,7 @@ const bins = createMemo(() => {
     smart: false,
     pot: false,
     square: false,
-    allowRotation: true,
+    allowRotation: paper.allowRotation,
   });
 
   const addImage = (image: HTMLImageElement) => {
@@ -214,7 +215,10 @@ async function downloadPdfFromCurrentLayout() {
           throw new Error("Failed to create rotated canvas context");
         }
 
-        rotatedContext.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+        rotatedContext.translate(
+          rotatedCanvas.width / 2,
+          rotatedCanvas.height / 2,
+        );
         rotatedContext.rotate(Math.PI / 2);
         rotatedContext.drawImage(
           fitCanvas,
@@ -373,6 +377,16 @@ function Sidebar() {
             <option value="in">Inches</option>
             <option value="mm">Millimeters</option>
           </select>
+        </label>
+        <label style={{ "white-space": "nowrap" }}>
+          <input
+            type="checkbox"
+            checked={paper.allowRotation}
+            onChange={(e) =>
+              setPaper((paper) => void (paper.allowRotation = e.target.checked))
+            }
+          />
+          Allow rotation
         </label>
       </fieldset>
       <fieldset>
