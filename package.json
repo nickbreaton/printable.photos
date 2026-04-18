@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "@solidjs/web": "2.0.0-beta.6",
+    "@types/pica": "^9.0.5",
     "solid-js": "2.0.0-beta.6",
     "typescript": "~6.0.2",
     "vite": "npm:@voidzero-dev/vite-plus-core@latest",
