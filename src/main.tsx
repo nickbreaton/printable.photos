@@ -6,6 +6,9 @@ import "./style.css";
 import { createMemo, createStore, For, Loading, type JSX } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 
+// @ts-ignore
+const lf: any = window.localforage;
+
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
 }
@@ -36,13 +39,11 @@ function getPhotoStyle(
 }
 
 function createImage(src: string) {
-  return createMemo(() => {
-    return new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = src;
-    });
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = src;
   });
 }
 
@@ -74,11 +75,22 @@ const PAPER_PRESETS = {
 
 const ALL_PAPER_PRESETS = Object.values(PAPER_PRESETS).flat();
 
-const image1 = createImage("/fixtures/image1.jpg");
-const image2 = createImage("/fixtures/image2.jpg");
-const image3 = createImage("/fixtures/image3.jpg");
+// const image1 = createImage("/fixtures/image1.jpg");
+// const image2 = createImage("/fixtures/image2.jpg");
+// const image3 = createImage("/fixtures/image3.jpg");
 
-const bins = createMemo(() => {
+const imageKeys = createMemo<string[]>(async () => {
+  return await lf.keys();
+});
+
+const images = createMemo<{ file: File }[]>(async () => {
+  const promises = imageKeys().map((key) => {
+    return lf.getItem(key);
+  });
+  return Promise.all(promises);
+});
+
+const bins = createMemo(async () => {
   const packer = new MaxRectsPacker(paper.width, paper.height, paper.gap, {
     border: paper.margin,
     smart: false,
@@ -93,9 +105,16 @@ const bins = createMemo(() => {
     packer.add(imageConfig.width, proportionalHeight, { src: image.src });
   };
 
-  addImage(image1());
-  addImage(image2());
-  addImage(image3());
+  for (const image of images()) {
+    // TODO: probably creat ethe html element somewhere else / pass in limited props
+    const url = URL.createObjectURL(image.file);
+    const element = await createImage(url);
+    addImage(element);
+  }
+
+  // addImage(image1());
+  // addImage(image2());
+  // addImage(image3());
 
   return packer.bins;
 });
@@ -388,6 +407,20 @@ function Sidebar() {
             }
           />
         </label>
+      </fieldset>
+      <fieldset>
+        <input
+          type="file"
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+
+            if (file) {
+              await lf.setItem(crypto.randomUUID(), { file });
+            }
+
+            event.target.value = "";
+          }}
+        />
       </fieldset>
       <button
         type="button"
