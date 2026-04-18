@@ -109,10 +109,6 @@ async function downloadPdfFromCurrentLayout() {
     return value;
   };
 
-  const imageCache = new Map<
-    string,
-    { blob: Blob; width: number; height: number }
-  >();
   const pdf = await PDFDocument.create();
   const pica = picaFactory();
 
@@ -124,18 +120,10 @@ async function downloadPdfFromCurrentLayout() {
     for (const rect of bin.rects) {
       const src = rect.data.src as string;
 
-      let imageEntry = imageCache.get(src);
-      if (!imageEntry) {
-        const response = await fetch(src);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch image: ${src}`);
-        }
+      const response = await fetch(src);
 
-        const blob = await response.blob();
-        const bitmap = await createImageBitmap(blob);
-        imageEntry = { blob, width: bitmap.width, height: bitmap.height };
-        bitmap.close();
-        imageCache.set(src, imageEntry);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${src}`);
       }
 
       const placedWidthInches = toInches(rect.width);
@@ -143,7 +131,8 @@ async function downloadPdfFromCurrentLayout() {
       const targetPxW = Math.max(1, Math.ceil(placedWidthInches * 300));
       const targetPxH = Math.max(1, Math.ceil(placedHeightInches * 300));
 
-      const sourceBitmap = await createImageBitmap(imageEntry.blob);
+      const blob = await response.blob();
+      const sourceBitmap = await createImageBitmap(blob);
 
       const sourceCanvas = document.createElement("canvas");
       sourceCanvas.width = sourceBitmap.width;
@@ -228,8 +217,7 @@ async function downloadPdfFromCurrentLayout() {
         pdfImageCanvas = rotatedCanvas;
       }
 
-      const mimeType =
-        imageEntry.blob.type === "image/png" ? "image/png" : "image/jpeg";
+      const mimeType = blob.type === "image/png" ? "image/png" : "image/jpeg";
       const resizedBlob = await pica.toBlob(
         pdfImageCanvas,
         mimeType,
