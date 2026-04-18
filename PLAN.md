@@ -49,3 +49,21 @@ Use a shared scene model as the single source of truth.
 4. Do not upscale images above source resolution.
 
 Result: print-appropriate quality while avoiding massive PDFs from oversized originals.
+
+### `pica` Downsampling Flow
+
+1. Decode uploaded image into a bitmap/canvas source.
+2. Convert placed PDF size to inches and compute target pixels at 300 DPI:
+   - `targetPxW = ceil(placedWidthInches * 300)`
+   - `targetPxH = ceil(placedHeightInches * 300)`
+3. Clamp target size to source size so we never upscale:
+   - `outputPxW = min(sourcePxW, targetPxW)`
+   - `outputPxH = min(sourcePxH, targetPxH)`
+4. Resize with `pica` into an output canvas at `outputPxW x outputPxH`.
+5. Export resized canvas to bytes (`JPEG` for photos, `PNG` only when alpha is required).
+6. Embed resized bytes with `pdf-lib` and draw at final physical bounds on the page.
+
+High-level `pica` API we will use:
+- `picaFactory()` to create the resizer instance.
+- `pica.resize(srcCanvas, destCanvas, options)` for high-quality downsampling.
+- `pica.toBlob(destCanvas, mimeType, quality?)` to produce final encoded bytes for `pdf-lib`.
