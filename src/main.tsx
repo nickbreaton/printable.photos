@@ -412,8 +412,8 @@ function Sidebar() {
             for (const file of files) {
               const url = URL.createObjectURL(file);
               const img = await createImage(url);
-              const width = img.naturalWidth;
-              const height = img.naturalHeight;
+              const width = img.width;
+              const height = img.height;
               const name = file.name;
               await lf.setItem(crypto.randomUUID(), {
                 file,
