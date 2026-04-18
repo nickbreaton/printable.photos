@@ -22,12 +22,6 @@
   box-sizing: border-box;
 }
 
-@media print {
-  body * {
-    visibility: hidden;
-  }
-}
-
 html,
 body {
   margin: 0;
@@ -38,17 +32,14 @@ body {
   padding: 1.25rem;
 }
 
+#print-fallback {
+  display: none;
+}
+
 .pages {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-
-  @media print {
-    gap: unset;
-    position: absolute;
-    left: 0;
-    top: 0;
-  }
 }
 
 .page {
@@ -58,14 +49,22 @@ body {
   max-width: var(--page-width);
   width: 100%;
   margin: auto;
-
-  @media print {
-    width: var(--page-width);
-  }
 }
 
 .photo {
   display: block;
   object-fit: cover;
   visibility: visible;
+}
+
+@media print {
+  #app,
+  #root {
+    display: none !important;
+  }
+
+  #print-fallback {
+    display: block;
+    padding: 2rem;
+  }
 }
