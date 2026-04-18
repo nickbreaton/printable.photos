@@ -1,0 +1,252 @@
+# Solid 2.0 Migration Notes
+
+Last updated: 2026-04-18
+
+This project is currently on:
+
+- `solid-js@2.0.0-beta.6`
+- `@solidjs/web@2.0.0-beta.6`
+
+This file is a working note for Solid 2.0 migration details that are easy to forget or easy to get wrong.
+
+## Important Caveat
+
+Solid's public docs, `next`-branch migration docs, and the currently published beta packages are not perfectly aligned yet.
+
+- The installed `beta.6` package in this repo does not include `@solidjs/universal`.
+- The installed `beta.6` `solid-js` types still expose the current `createEffect(fn, value?, options?)` style.
+- Solid's official `next` migration guide/RFCs describe the incoming split-effect model and `@solidjs/universal`.
+
+Treat the migration guide items below as the direction of Solid 2.0, but verify against the exact installed beta before doing broad refactors.
+
+## Custom Renderers
+
+The Solid 2.0 migration guide says custom renderers move from:
+
+```ts
+import { createRenderer } from "solid-js/universal";
+```
+
+to:
+
+```ts
+import { createRenderer } from "@solidjs/universal";
+```
+
+The renderer shape appears to stay conceptually the same: you provide platform hooks like element creation, text replacement, insertion, removal, and sibling/parent traversal.
+
+Example shape from Solid's official renderer docs/release notes:
+
+```ts
+import { createRenderer } from "@solidjs/universal";
+
+const PROPERTIES = new Set(["className", "textContent"]);
+
+export const {
+  render,
+  effect,
+  memo,
+  createComponent,
+  createElement,
+  createTextNode,
+  insertNode,
+  insert,
+  spread,
+  setProp,
+  mergeProps,
+} = createRenderer({
+  createElement(tag) {
+    return document.createElement(tag);
+  },
+  createTextNode(value) {
+    return document.createTextNode(value);
+  },
+  replaceText(node, value) {
+    node.data = value;
+  },
+  setProperty(node, name, value) {
+    if (name === "style") Object.assign(node.style, value);
+    else if (name.startsWith("on")) node[name.toLowerCase()] = value;
+    else if (PROPERTIES.has(name)) node[name] = value;
+    else node.setAttribute(name, value);
+  },
+  insertNode(parent, node, anchor) {
+    parent.insertBefore(node, anchor);
+  },
+  isTextNode(node) {
+    return node.nodeType === 3;
+  },
+  removeNode(parent, node) {
+    parent.removeChild(node);
+  },
+  getParentNode(node) {
+    return node.parentNode;
+  },
+  getFirstChild(node) {
+    return node.firstChild;
+  },
+  getNextSibling(node) {
+    return node.nextSibling;
+  },
+});
+```
+
+Practical takeaway:
+
+- If we ever build a Solid 2 custom renderer, start by checking whether `@solidjs/universal` is actually published for the exact beta we are using.
+- Do not assume old `solid-js/universal` import paths still work in final 2.0.
+
+## Reactivity And Effects
+
+### Split `createEffect` is the migration direction
+
+Solid's 2.0 migration docs describe `createEffect` as two-phase:
+
+- compute phase: read reactive values only
+- apply phase: perform side effects and optionally return cleanup
+
+Example from the migration docs:
+
+```ts
+createEffect(
+  () => name(),
+  (value) => {
+    el().title = value;
+  },
+);
+```
+
+Cleanup belongs on the apply side:
+
+```ts
+createEffect(
+  () => name(),
+  (value) => {
+    const id = setInterval(() => console.log(value), 1000);
+    return () => clearInterval(id);
+  },
+);
+```
+
+Important caveat for this repo:
+
+- the installed `beta.6` types do not yet expose this split signature in `solid-js`
+- the official `next` migration docs do
+
+So for now, treat split effects as the target model, not as something we should blindly codemod everywhere without checking the exact package behavior first.
+
+### `createRenderEffect`
+
+`createRenderEffect` still exists and is for render-phase work.
+
+- It runs synchronously during render.
+- It runs before refs are assigned on the initial pass.
+- Most app code should still prefer `createEffect`.
+
+## Scheduling / Batching
+
+Solid 2.0 migration docs describe a more explicit microtask-batched model:
+
+- setters queue work
+- reads continue to see the previous committed value until flush
+- `flush()` forces pending updates to apply immediately
+
+Example from the migration docs:
+
+```ts
+const [count, setCount] = createSignal(0);
+
+setCount(1);
+count(); // old value until flush
+
+flush();
+count(); // new value
+```
+
+Practical rule:
+
+- avoid assuming "set then immediately read" works the way Solid 1.x did
+- only use `flush()` when imperative code genuinely needs a settled state immediately
+
+## Top-Level Reactive Reads
+
+Solid 2.0 dev guidance warns on top-level reactive reads in component bodies.
+
+This includes common mistakes like:
+
+- destructuring props in function args
+- assigning `const foo = props.foo` at component top level
+
+Preferred pattern:
+
+```tsx
+function Title(props) {
+  return <h1>{props.title}</h1>;
+}
+```
+
+Not this:
+
+```tsx
+function Title({ title }) {
+  return <h1>{title}</h1>;
+}
+```
+
+For this repo specifically:
+
+- do not destructure props
+
+## Owned-Scope Writes
+
+Solid 2.0 docs also tighten writes inside reactive scopes.
+
+- Avoid writing signals/stores inside component bodies, memos, or tracking code.
+- Prefer deriving with `createMemo`.
+- Prefer event handlers, actions, or effect apply functions for side effects.
+
+Bad:
+
+```ts
+createMemo(() => setDoubled(count() * 2));
+```
+
+Good:
+
+```ts
+const doubled = createMemo(() => count() * 2);
+```
+
+## Loading / Async Direction
+
+Solid 2.0 is pushing toward async-first computations and `Loading` boundaries.
+
+- Use `<Loading fallback={...}>` for initial readiness.
+- Use `isPending(() => expr)` for refresh/revalidation indicators.
+- The migration guide frames this as the successor mental model to old `Suspense`-centric patterns.
+
+The installed package already exports `Loading`.
+
+## Other Migration Notes
+
+- DOM runtime imports move from `solid-js/web` to `@solidjs/web`.
+- Store helpers now come from `solid-js` rather than `solid-js/store`.
+- `onMount` is being replaced by `onSettled` in the migration guide.
+- `Index` is replaced by `<For keyed={false}>`.
+- `classList` is being folded into `class`.
+- `use:` directives are being replaced by `ref` directive factories and ref arrays.
+
+## Sources
+
+- Solid 2.0 beta release notes:
+  - https://github.com/solidjs/solid/releases
+- Solid 2.0 migration guide on Solid's `next` branch:
+  - https://github.com/solidjs/solid/blob/next/documentation/solid-2.0/MIGRATION.md
+- Solid 2.0 RFC for reactivity/batching/effects:
+  - https://github.com/solidjs/solid/blob/next/documentation/solid-2.0/01-reactivity-batching-effects.md
+- Solid 2.0 RFC for DOM changes:
+  - https://github.com/solidjs/solid/blob/next/documentation/solid-2.0/07-dom.md
+- Current public docs for `createEffect`:
+  - https://docs.solidjs.com/reference/basic-reactivity/create-effect
+- Current public docs for `createRenderEffect`:
+  - https://docs.solidjs.com/reference/secondary-primitives/create-render-effect
