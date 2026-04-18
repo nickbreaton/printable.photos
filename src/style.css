@@ -50,6 +50,7 @@ body {
   display: block;
   object-fit: cover;
   visibility: visible;
+  dynamic-range-limit: standard;
 }
 
 @media print {
