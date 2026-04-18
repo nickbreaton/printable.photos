@@ -260,16 +260,12 @@ async function downloadPdfFromCurrentLayout() {
   const output = new Blob([bytes.buffer as ArrayBuffer], {
     type: "application/pdf",
   });
+
   const url = URL.createObjectURL(output);
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "printable-photos.pdf";
-  link.click();
+  window.open(url, "_blank");
 
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 0);
+  URL.revokeObjectURL(url);
 }
 
 const selectedPaperPreset = createMemo(() => {
