@@ -11,12 +11,12 @@
         "pica": "^9.0.1",
       },
       "devDependencies": {
-        "@solidjs/web": "2.0.0-beta.6",
+        "@solidjs/web": "2.0.0-beta.7",
         "@types/pica": "^9.0.5",
-        "solid-js": "2.0.0-beta.6",
+        "solid-js": "2.0.0-beta.7",
         "typescript": "~6.0.2",
         "vite": "npm:@voidzero-dev/vite-plus-core@latest",
-        "vite-plugin-solid": "3.0.0-next.4",
+        "vite-plugin-solid": "3.0.0-next.5",
         "vite-plus": "latest",
       },
     },
@@ -170,9 +170,9 @@
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
 
-    "@solidjs/signals": ["@solidjs/signals@0.13.12", "", {}, "sha512-NCpr1l+kTV0zdy1GIKOKvpyVHKju4lKRZlkanOeHdvC/6rjZNpF8USHsANAgWVYnvrFO9VVCcmT4st/A9Iwnxg=="],
+    "@solidjs/signals": ["@solidjs/signals@2.0.0-beta.7", "", {}, "sha512-SgK6oQlQZofz82LiEJ2RzT3sbs1lWTqFEtLoWjLsUo/dk1v9EoIFpJJlmvgkXvNugASWG+l1yOHa1a8lPamxug=="],
 
-    "@solidjs/web": ["@solidjs/web@2.0.0-beta.6", "", { "dependencies": { "seroval": "^1.1.0", "seroval-plugins": "^1.1.0" }, "peerDependencies": { "@solidjs/signals": "^0.13.11", "solid-js": "^2.0.0-beta.6" } }, "sha512-yAU2CWp20gNI++rUucSRYdxL1IFhu0Rl3sH2teZjNj4/GwOTGJawei4qC0ttHRabtgO5K2zJ3GvNLm8FKVaXwQ=="],
+    "@solidjs/web": ["@solidjs/web@2.0.0-beta.7", "", { "dependencies": { "seroval": "^1.1.0", "seroval-plugins": "^1.1.0" }, "peerDependencies": { "@solidjs/signals": "^2.0.0-beta.7", "solid-js": "^2.0.0-beta.7" } }, "sha512-m5VjmDBufrOX0ZKGbhvwkT0CPK0TbMxDbxVPDB1PH2evGbWXQZcUlrpFM1N8RBO5md3aR/T1PgMfnOjleJbrRg=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
@@ -338,9 +338,9 @@
 
     "sirv": ["sirv@3.0.2", "", { "dependencies": { "@polka/url": "^1.0.0-next.24", "mrmime": "^2.0.0", "totalist": "^3.0.0" } }, "sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g=="],
 
-    "solid-js": ["solid-js@2.0.0-beta.6", "", { "dependencies": { "@solidjs/signals": "^0.13.11", "csstype": "^3.1.0", "seroval": "~1.5.0", "seroval-plugins": "~1.5.0" } }, "sha512-C0IYMgZPPM0NKgonHNlWMDUwRKC88rII+5z8pFtAkqi/cHfdiUkpYLPtxP8YsqH7TwLRQGyB8/NgiVzkxNwPGA=="],
+    "solid-js": ["solid-js@2.0.0-beta.7", "", { "dependencies": { "@solidjs/signals": "^2.0.0-beta.7", "csstype": "^3.1.0", "seroval": "~1.5.0", "seroval-plugins": "~1.5.0" } }, "sha512-7JHs+BhLeZXoU+u9dG+eKnyxxfZyGpOuJEBbN/1XbHKO/WhxecdplOAurlg/YDllNWPhsbXqmLR1H2paqSu62g=="],
 
-    "solid-refresh": ["solid-refresh@0.8.0-next.6", "", { "dependencies": { "@babel/generator": "^7.29.1", "@babel/types": "^7.29.0" }, "peerDependencies": { "solid-js": ">=2.0.0-beta.0 <2.0.0" } }, "sha512-QXLGvNH4P29BAmT1nysg5/sImrXY6daR07juJVw2dinJSISIjyC0qIaZSSUK0M/zN6sJmtFtCAdMmubj+zTQ1A=="],
+    "solid-refresh": ["solid-refresh@0.8.0-next.7", "", { "dependencies": { "@babel/generator": "^7.29.1", "@babel/types": "^7.29.0" }, "peerDependencies": { "solid-js": ">=2.0.0-beta.7 <2.0.0-experimental.0" } }, "sha512-fqkPRAeiE0tqfo2ZljeQBIXwfYssU2w1FmaWFrXmnV33B/CfGfez7BjtOF0Y1/orUNRXI/DZcJlJThHllcCMsA=="],
 
     "source-map-js": ["source-map-js@1.2.1", "", {}, "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="],
 
@@ -366,7 +366,7 @@
 
     "vite": ["@voidzero-dev/vite-plus-core@0.1.16", "", { "dependencies": { "@oxc-project/runtime": "=0.123.0", "@oxc-project/types": "=0.123.0", "lightningcss": "^1.30.2", "postcss": "^8.5.6" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@arethetypeswrong/core": "^0.18.1", "@tsdown/css": "0.21.7", "@tsdown/exe": "0.21.7", "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.1.0", "esbuild": "^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "publint": "^0.3.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "typescript": "^5.0.0 || ^6.0.0", "unplugin-unused": "^0.5.0", "yaml": "^2.4.2" }, "optionalPeers": ["@arethetypeswrong/core", "@tsdown/css", "@tsdown/exe", "@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "publint", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "typescript", "unplugin-unused", "yaml"] }, "sha512-fOyf14CXjcXqANFs2fCXEX+0Tn9ZjmqfFV+qTnARwIF1Kzl8WquO4XtvlDgs/fTQ91H4AyoNUgkvWdKS+C4xYA=="],
 
-    "vite-plugin-solid": ["vite-plugin-solid@3.0.0-next.4", "", { "dependencies": { "@babel/core": "^7.23.3", "@types/babel__core": "^7.20.4", "babel-preset-solid": ">=2.0.0-beta.0 <2.0.0-experimental.0", "merge-anything": "^5.1.7", "solid-refresh": ">=0.8.0-next.2 < 0.8.0", "vitefu": "^1.0.4" }, "peerDependencies": { "@solidjs/web": ">=2.0.0-beta.0 <2.0.0-experimental.0", "@testing-library/jest-dom": "^5.16.6 || ^5.17.0 || ^6.*", "solid-js": ">=2.0.0-beta.0 <2.0.0-experimental.0", "vite": "^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0" }, "optionalPeers": ["@testing-library/jest-dom"] }, "sha512-6t2oUJs5H7UtFxw3tM/EC2mxHmzeOtMlnPI/HFkzDqy1XaDuGjbdhggSi7KbuhP0mWM7I+IktPDlu4SWuCFPKw=="],
+    "vite-plugin-solid": ["vite-plugin-solid@3.0.0-next.5", "", { "dependencies": { "@babel/core": "^7.23.3", "@types/babel__core": "^7.20.4", "babel-preset-solid": ">=2.0.0-beta.0 <2.0.0-experimental.0", "merge-anything": "^5.1.7", "solid-refresh": ">=0.8.0-next.7 < 0.8.0", "vitefu": "^1.0.4" }, "peerDependencies": { "@solidjs/web": ">=2.0.0-beta.0 <2.0.0-experimental.0", "@testing-library/jest-dom": "^5.16.6 || ^5.17.0 || ^6.*", "solid-js": ">=2.0.0-beta.0 <2.0.0-experimental.0", "vite": "^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0" }, "optionalPeers": ["@testing-library/jest-dom"] }, "sha512-hcn3mzevQDv6Oyo/Zv5LXdOrlWwKGeGVxNhc9fUq3AcN9aO6KABy52yq5cvnPDo3qaxmvOJVbNS1H4V5rx7AQg=="],
 
     "vite-plus": ["vite-plus@0.1.16", "", { "dependencies": { "@oxc-project/types": "=0.123.0", "@voidzero-dev/vite-plus-core": "0.1.16", "@voidzero-dev/vite-plus-test": "0.1.16", "oxfmt": "=0.43.0", "oxlint": "=1.58.0", "oxlint-tsgolint": "=0.20.0" }, "optionalDependencies": { "@voidzero-dev/vite-plus-darwin-arm64": "0.1.16", "@voidzero-dev/vite-plus-darwin-x64": "0.1.16", "@voidzero-dev/vite-plus-linux-arm64-gnu": "0.1.16", "@voidzero-dev/vite-plus-linux-arm64-musl": "0.1.16", "@voidzero-dev/vite-plus-linux-x64-gnu": "0.1.16", "@voidzero-dev/vite-plus-linux-x64-musl": "0.1.16", "@voidzero-dev/vite-plus-win32-arm64-msvc": "0.1.16", "@voidzero-dev/vite-plus-win32-x64-msvc": "0.1.16" }, "bin": { "oxfmt": "bin/oxfmt", "oxlint": "bin/oxlint", "vp": "bin/vp" } }, "sha512-sgYHc5zWLSDInaHb/abvEA7UOwh7sUWuyNt+Slphj55jPvzodT8Dqw115xyKwDARTuRFSpm1eo/t58qZ8/NylQ=="],
 

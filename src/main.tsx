@@ -488,10 +488,7 @@ function Pages() {
         {(bin) => (
           <div
             class="page"
-            style={{
-              "aspect-ratio": paper.width / paper.height,
-              "max-width": paper.width + paper.units,
-            }}
+            style={`aspect-ratio: ${paper.width / paper.height}; max-width: ${paper.width}${paper.units};`}
           >
             <For each={bin().rects}>
               {(rect) => (

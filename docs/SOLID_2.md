@@ -1,11 +1,12 @@
 # Solid 2.0 Migration Notes
 
-Last updated: 2026-04-18
+Last updated: 2026-04-20
 
 This project is currently on:
 
-- `solid-js@2.0.0-beta.6`
-- `@solidjs/web@2.0.0-beta.6`
+- `solid-js@2.0.0-beta.7`
+- `@solidjs/web@2.0.0-beta.7`
+- `vite-plugin-solid@3.0.0-next.5`
 
 This file is a working note for Solid 2.0 migration details that are easy to forget or easy to get wrong.
 
@@ -13,8 +14,8 @@ This file is a working note for Solid 2.0 migration details that are easy to for
 
 Solid's public docs, `next`-branch migration docs, and the currently published beta packages are not perfectly aligned yet.
 
-- The installed `beta.6` package in this repo does not include `@solidjs/universal`.
-- The installed `beta.6` `solid-js` types still expose the current `createEffect(fn, value?, options?)` style.
+- The installed `beta.7` package set in this repo does not include `@solidjs/universal`.
+- The installed `beta.7` `solid-js` types expose the split `createEffect(compute, effect, options?)` style.
 - Solid's official `next` migration guide/RFCs describe the incoming split-effect model and `@solidjs/universal`.
 
 Treat the migration guide items below as the direction of Solid 2.0, but verify against the exact installed beta before doing broad refactors.
@@ -130,8 +131,7 @@ createEffect(
 
 Important caveat for this repo:
 
-- the installed `beta.6` types do not yet expose this split signature in `solid-js`
-- the official `next` migration docs do
+- the installed `beta.7` types expose this split signature in `solid-js`
 
 So for now, treat split effects as the target model, not as something we should blindly codemod everywhere without checking the exact package behavior first.
 
