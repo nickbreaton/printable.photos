@@ -4,13 +4,18 @@ import { PDFDocument } from "pdf-lib";
 
 import "./style.css";
 import {
+  action,
   createMemo,
   createStore,
   For,
+  isPending,
   Loading,
   omit,
   onCleanup,
+  refresh,
+  createOptimistic,
   type JSX,
+  resolve,
 } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 
@@ -277,6 +282,8 @@ const selectedPaperPreset = createMemo(() => {
 });
 
 function Sidebar() {
+  const [saving, setSaving] = createOptimistic(false);
+
   return (
     <>
       <fieldset>
@@ -405,17 +412,20 @@ function Sidebar() {
         <input
           type="file"
           multiple
-          onChange={async (event) => {
-            const files = event.target.files ?? [];
+          disabled={isPending(imageKeys) || saving()}
+          onChange={action(function* (event) {
+            setSaving(true);
 
+            const files = event.target.files ?? [];
+            yield new Promise((res) => setTimeout(res, 1000));
             // TODO: concurrency
             for (const file of files) {
               const url = URL.createObjectURL(file);
-              const img = await createImage(url);
+              const img = yield createImage(url);
               const width = img.width;
               const height = img.height;
               const name = file.name;
-              await lf.setItem(crypto.randomUUID(), {
+              yield lf.setItem(crypto.randomUUID(), {
                 file,
                 width,
                 height,
@@ -423,8 +433,12 @@ function Sidebar() {
               } satisfies StoredImage);
             }
 
+            refresh(imageKeys);
+
+            // Hold until fully refreshed so UI doesnt tear resetting DOM directly
+            yield resolve(imageKeys);
             event.target.value = "";
-          }}
+          })}
         />
       </fieldset>
       <button
