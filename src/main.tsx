@@ -1,4 +1,5 @@
 import { render } from "@solidjs/web";
+import localforage from "localforage";
 import picaFactory from "pica";
 import { PDFDocument } from "pdf-lib";
 
@@ -18,9 +19,6 @@ import {
   resolve,
 } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
-
-// @ts-ignore
-const lf: any = window.localforage;
 
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
@@ -89,7 +87,7 @@ const PAPER_PRESETS = {
 const ALL_PAPER_PRESETS = Object.values(PAPER_PRESETS).flat();
 
 const imageKeys = createMemo<string[]>(async () => {
-  return await lf.keys();
+  return await localforage.keys();
 });
 
 interface StoredImage {
@@ -101,9 +99,11 @@ interface StoredImage {
 
 const images = createMemo<StoredImage[]>(async () => {
   const promises = imageKeys().map((key) => {
-    return lf.getItem(key);
+    return localforage.getItem<StoredImage>(key);
   });
-  return Promise.all(promises);
+  const storedImages = await Promise.all(promises);
+
+  return storedImages.filter((image): image is StoredImage => image !== null);
 });
 
 const bins = createMemo(async () => {
@@ -425,12 +425,12 @@ function Sidebar() {
               const width = img.width;
               const height = img.height;
               const name = file.name;
-              yield lf.setItem(crypto.randomUUID(), {
+              yield localforage.setItem<StoredImage>(crypto.randomUUID(), {
                 file,
                 width,
                 height,
                 name,
-              } satisfies StoredImage);
+              });
             }
 
             refresh(imageKeys);
