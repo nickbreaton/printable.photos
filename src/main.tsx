@@ -437,7 +437,7 @@ function Sidebar() {
             refresh(imageKeys);
 
             // Hold until fully refreshed so UI doesnt tear resetting DOM directly
-            yield resolve(imageKeys);
+            yield resolve(bins);
             event.target.value = "";
           })}
         />
