@@ -418,7 +418,7 @@ function Sidebar() {
             setSaving(true);
 
             const files = event.target.files ?? [];
-            yield new Promise((res) => setTimeout(res, 1000));
+
             // TODO: concurrency
             for (const file of files) {
               const url = URL.createObjectURL(file);
