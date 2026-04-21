@@ -489,14 +489,7 @@ function Pages() {
         {(bin) => (
           <div
             class="page"
-<<<<<<< Updated upstream
             style={`aspect-ratio: ${paper.width / paper.height}; max-width: ${paper.width}${paper.units};`}
-=======
-            style={{
-              "aspect-ratio": String(paper.width / paper.height),
-              "max-width": paper.width + paper.units,
-            }}
->>>>>>> Stashed changes
           >
             <For each={bin().rects}>
               {(rect) => (
