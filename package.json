@@ -9,9 +9,9 @@
     "preview": "vp preview"
   },
   "devDependencies": {
-    "@solidjs/web": "2.0.0-beta.7",
+    "@solidjs/web": "2.0.0-beta.8",
     "@types/pica": "^9.0.5",
-    "solid-js": "2.0.0-beta.7",
+    "solid-js": "2.0.0-beta.8",
     "typescript": "~6.0.2",
     "vite": "npm:@voidzero-dev/vite-plus-core@latest",
     "vite-plugin-solid": "3.0.0-next.5",
