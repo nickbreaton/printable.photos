@@ -11,12 +11,11 @@ import {
   For,
   isPending,
   Loading,
-  omit,
   onCleanup,
   refresh,
   createOptimistic,
   type JSX,
-  resolve,
+  createProjection,
 } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 
@@ -97,7 +96,14 @@ interface StoredImage {
   name: string;
 }
 
-const images = createMemo<StoredImage[]>(async () => {
+interface ImageRef {
+  url: string;
+  width: number;
+  height: number;
+  name: string;
+}
+
+const imageBlobs = createMemo<StoredImage[]>(async () => {
   const promises = imageKeys().map((key) => {
     return localforage.getItem<StoredImage>(key);
   });
@@ -106,7 +112,18 @@ const images = createMemo<StoredImage[]>(async () => {
   return storedImages.filter((image): image is StoredImage => image !== null);
 });
 
-const bins = createMemo(async () => {
+const images = createMemo<ImageRef[]>(() => {
+  return imageBlobs().map((image) => {
+    const { file, ...props } = image;
+    const blobUrl = URL.createObjectURL(file);
+
+    onCleanup(() => URL.revokeObjectURL(blobUrl));
+
+    return { url: blobUrl, ...props };
+  });
+});
+
+const bins = createProjection(async () => {
   const packer = new MaxRectsPacker(paper.width, paper.height, paper.gap, {
     border: paper.margin,
     smart: false,
@@ -124,7 +141,7 @@ const bins = createMemo(async () => {
   }
 
   return packer.bins;
-});
+}, []);
 
 async function downloadPdfFromCurrentLayout() {
   const toInches = (value: number) => {
@@ -138,7 +155,7 @@ async function downloadPdfFromCurrentLayout() {
   const pdf = await PDFDocument.create();
   const pica = picaFactory();
 
-  for (const bin of bins()) {
+  for (const bin of bins) {
     const pageWidthPt = toInches(paper.width) * 72;
     const pageHeightPt = toInches(paper.height) * 72;
     const page = pdf.addPage([pageWidthPt, pageHeightPt]);
@@ -437,7 +454,7 @@ function Sidebar() {
             refresh(imageKeys);
 
             // Hold until fully refreshed so UI doesnt tear resetting DOM directly
-            yield resolve(bins);
+            // yield resolve(() => Object.keys(bins));
             event.target.value = "";
           })}
         />
@@ -457,35 +474,43 @@ function Sidebar() {
   );
 }
 
-function BlobImage(
-  props: JSX.ImgHTMLAttributes<HTMLImageElement> & { blob: Blob },
-) {
-  const el = createMemo(() => {
-    const url = URL.createObjectURL(props.blob);
+function AsyncImage(props: JSX.ImgHTMLAttributes<HTMLImageElement>) {
+  // const el = createMemo(() => {
+  //   const url = URL.createObjectURL(props.blob);
 
-    onCleanup(() => {
-      URL.revokeObjectURL(url);
-    });
+  //   onCleanup(() => {
+  //     URL.revokeObjectURL(url);
+  //   });
 
-    const img = (
-      <img {...omit(props, "blob")} src={url} />
-    ) as HTMLImageElement;
+  //   const img = (
+  //     <img {...omit(props, "blob")} src={url} />
+  //   ) as HTMLImageElement;
 
-    return new Promise<HTMLImageElement>((resolve, reject) => {
-      img.onload = () => resolve(img);
+  //   return new Promise<HTMLImageElement>((resolve, reject) => {
+  //     img.onload = () => resolve(img);
+  //     img.onerror = reject;
+  //     // Forces the load to begin (maybe theres a better way)
+  //     document.head.append(img);
+  //   });
+  // });
+
+  const src = createMemo(async () => {
+    return new Promise<string>(async (resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img.src);
       img.onerror = reject;
-      // Forces the load to begin (maybe theres a better way)
-      document.head.append(img);
+      if (props.src) img.src = props.src;
+      await img.decode();
     });
   });
 
-  return <>{el()}</>;
+  return <img {...props} src={src()} />;
 }
 
 function Pages() {
   return (
     <div class="pages">
-      <For each={bins()}>
+      <For each={bins}>
         {(bin) => (
           <div
             class="page"
@@ -493,9 +518,9 @@ function Pages() {
           >
             <For each={bin().rects}>
               {(rect) => (
-                <BlobImage
+                <AsyncImage
                   class="photo"
-                  blob={rect().data.file}
+                  src={rect().data.url}
                   style={getPhotoStyle(rect(), paper)}
                 />
               )}
