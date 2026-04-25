@@ -6,6 +6,6 @@
     "label": "Install dependencies",
     "command": "bun install",
     "hooks": ["create_worktree"],
-    "reveal": "always",
+    "hide": "on_success",
   },
 ]
