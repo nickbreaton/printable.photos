@@ -486,10 +486,14 @@ function AsyncImage(props: JSX.ImgHTMLAttributes<HTMLImageElement>) {
   const src = createMemo(async () => {
     return new Promise<string>((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img.src);
+      img.onload = () => {
+        resolve(img.src);
+        img.remove();
+      };
       img.onerror = reject;
       if (props.src) img.src = props.src;
-      void img.decode();
+      img.hidden = true;
+      document.head.append(img);
     });
   });
 
