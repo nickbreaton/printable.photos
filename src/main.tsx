@@ -509,17 +509,17 @@ function AsyncImage(props: JSX.ImgHTMLAttributes<HTMLImageElement>) {
 
 function Pages() {
   return (
-    <div class="pages">
+    <div class="flex flex-col gap-5">
       <For each={bins}>
         {(bin) => (
           <div
-            class="page"
+            class="relative mx-auto w-full overflow-hidden border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.08),0_8px_24px_rgb(0_0_0/0.04)]"
             style={`aspect-ratio: ${paper.width / paper.height}; max-width: ${paper.width}${paper.units};`}
           >
             <For each={bin().rects}>
               {(rect) => (
                 <AsyncImage
-                  class="photo"
+                  class="block object-cover visible [dynamic-range-limit:standard]"
                   src={rect().data.url}
                   style={getPhotoStyle(rect(), paper)}
                 />
@@ -535,6 +535,7 @@ function Pages() {
 function App() {
   return (
     <Loading>
+      <div class="pointer-events-none fixed inset-0 bg-muted" />
       <style>
         {
           /* css */ `
@@ -544,8 +545,10 @@ function App() {
           }`
         }
       </style>
-      <Sidebar />
-      <Pages />
+      <div class="relative z-0">
+        <Sidebar />
+        <Pages />
+      </div>
     </Loading>
   );
 }
