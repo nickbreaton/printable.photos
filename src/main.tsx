@@ -470,8 +470,7 @@ function Sidebar() {
       <button
         type="button"
         class="border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-        // TODO: renable this, seems like a solid beta bug
-        // disabled={downloading()}
+        disabled={downloading()}
         onClick={action(function* () {
           setDownloading(true);
           yield downloadPdfFromCurrentLayout();
@@ -484,25 +483,6 @@ function Sidebar() {
 }
 
 function AsyncImage(props: JSX.ImgHTMLAttributes<HTMLImageElement>) {
-  // const el = createMemo(() => {
-  //   const url = URL.createObjectURL(props.blob);
-
-  //   onCleanup(() => {
-  //     URL.revokeObjectURL(url);
-  //   });
-
-  //   const img = (
-  //     <img {...omit(props, "blob")} src={url} />
-  //   ) as HTMLImageElement;
-
-  //   return new Promise<HTMLImageElement>((resolve, reject) => {
-  //     img.onload = () => resolve(img);
-  //     img.onerror = reject;
-  //     // Forces the load to begin (maybe theres a better way)
-  //     document.head.append(img);
-  //   });
-  // });
-
   const src = createMemo(async () => {
     return new Promise<string>((resolve, reject) => {
       const img = new Image();
@@ -523,7 +503,10 @@ function Pages() {
         {(bin) => (
           <div
             class={`relative mx-auto w-full overflow-hidden ${cardSurfaceClass}`}
-            style={`aspect-ratio: ${paper.width / paper.height}; max-width: ${paper.width}${paper.units};`}
+            style={{
+              "aspect-ratio": paper.width / paper.height,
+              "max-width": `${paper.width}${paper.units}`,
+            }}
           >
             <For each={bin().rects}>
               {(rect) => (
