@@ -303,7 +303,7 @@ function Sidebar() {
   const [downloading, setDownloading] = createOptimistic(false);
 
   return (
-    <>
+    <aside class="sticky top-5 flex max-h-[calc(100vh-2.5rem)] w-72 shrink-0 flex-col gap-5 overflow-auto border border-border bg-card p-5 text-card-foreground shadow-[0_1px_2px_rgb(0_0_0/0.08),0_8px_24px_rgb(0_0_0/0.04)]">
       <fieldset>
         <label>
           Paper:{" "}
@@ -462,7 +462,8 @@ function Sidebar() {
       <button
         type="button"
         class="download-button"
-        disabled={downloading()}
+        // TODO: renable this, seems like a solid beta bug
+        // disabled={downloading()}
         onClick={action(function* () {
           setDownloading(true);
           yield downloadPdfFromCurrentLayout();
@@ -470,7 +471,7 @@ function Sidebar() {
       >
         Download PDF
       </button>
-    </>
+    </aside>
   );
 }
 
@@ -545,9 +546,11 @@ function App() {
           }`
         }
       </style>
-      <div class="relative z-0">
+      <div class="relative z-0 flex items-start gap-5">
         <Sidebar />
-        <Pages />
+        <main class="min-w-0 flex-1">
+          <Pages />
+        </main>
       </div>
     </Loading>
   );
