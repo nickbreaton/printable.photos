@@ -4,6 +4,11 @@ import picaFactory from "pica";
 import { PDFDocument } from "pdf-lib";
 
 import "./style.css";
+import { Checkbox } from "./components/Checkbox";
+import { FieldLabel } from "./components/FieldLabel";
+import { FileInput } from "./components/FileInput";
+import { Input } from "./components/Input";
+import { Select } from "./components/Select";
 import {
   action,
   createMemo,
@@ -304,19 +309,15 @@ const cardSurfaceClass =
 function Sidebar() {
   const [saving, setSaving] = createOptimistic(false);
   const [downloading, setDownloading] = createOptimistic(false);
-  const controlClass =
-    "mt-1 w-full border border-input bg-background px-2 py-1 text-sm";
-  const labelClass = "block text-sm font-medium";
 
   return (
     <aside
       class={`sticky top-5 flex max-h-[calc(100vh-2.5rem)] w-72 shrink-0 flex-col gap-5 overflow-auto p-5 ${cardSurfaceClass}`}
     >
       <fieldset class="flex flex-col gap-3">
-        <label class={labelClass}>
+        <FieldLabel>
           Paper
-          <select
-            class={controlClass}
+          <Select
             value={selectedPaperPreset()}
             onChange={(e) => {
               const selectedPreset = ALL_PAPER_PRESETS.find(
@@ -345,12 +346,11 @@ function Sidebar() {
                 </optgroup>
               )}
             </For>
-          </select>
-        </label>
-        <label class={labelClass}>
+          </Select>
+        </FieldLabel>
+        <FieldLabel>
           Width
-          <input
-            class={controlClass}
+          <Input
             type="number"
             step={1}
             value={paper.width}
@@ -358,11 +358,10 @@ function Sidebar() {
               setPaper((paper) => void (paper.width = e.target.valueAsNumber))
             }
           />
-        </label>
-        <label class={labelClass}>
+        </FieldLabel>
+        <FieldLabel>
           Height
-          <input
-            class={controlClass}
+          <Input
             type="number"
             step={1}
             value={paper.height}
@@ -370,11 +369,10 @@ function Sidebar() {
               setPaper((paper) => void (paper.height = e.target.valueAsNumber))
             }
           />
-        </label>
-        <label class={labelClass}>
+        </FieldLabel>
+        <FieldLabel>
           Margin
-          <input
-            class={controlClass}
+          <Input
             type="number"
             step={0.25}
             value={paper.margin}
@@ -382,11 +380,10 @@ function Sidebar() {
               setPaper((paper) => void (paper.margin = e.target.valueAsNumber))
             }
           />
-        </label>
-        <label class={labelClass}>
+        </FieldLabel>
+        <FieldLabel>
           Gap
-          <input
-            class={controlClass}
+          <Input
             type="number"
             step={0.25}
             value={paper.gap}
@@ -394,11 +391,10 @@ function Sidebar() {
               setPaper((paper) => void (paper.gap = e.target.valueAsNumber))
             }
           />
-        </label>
-        <label class={labelClass}>
+        </FieldLabel>
+        <FieldLabel>
           Units
-          <select
-            class={controlClass}
+          <Select
             value={paper.units}
             onChange={(e) =>
               setPaper(
@@ -411,11 +407,10 @@ function Sidebar() {
           >
             <option value="in">Inches</option>
             <option value="mm">Millimeters</option>
-          </select>
-        </label>
+          </Select>
+        </FieldLabel>
         <label class="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={paper.allowRotation}
             onChange={(e) =>
               setPaper((paper) => void (paper.allowRotation = e.target.checked))
@@ -425,10 +420,9 @@ function Sidebar() {
         </label>
       </fieldset>
       <fieldset class="flex flex-col gap-3 border-t border-border pt-5">
-        <label class={labelClass}>
+        <FieldLabel>
           Image width
-          <input
-            class={controlClass}
+          <Input
             type="number"
             step={1}
             value={imageConfig.width}
@@ -439,12 +433,10 @@ function Sidebar() {
               )
             }
           />
-        </label>
+        </FieldLabel>
       </fieldset>
       <fieldset class="border-t border-border pt-5">
-        <input
-          class="w-full text-sm file:mr-3 file:border file:border-input file:bg-background file:px-3 file:py-1 file:text-sm"
-          type="file"
+        <FileInput
           multiple
           disabled={isPending(imageKeys) || saving()}
           onChange={action(function* (event) {
