@@ -128,24 +128,39 @@ const images = createMemo<ImageRef[]>(() => {
   });
 });
 
-const bins = createProjection(async () => {
+function packImages(imageList: ImageRef[], allowRotation: boolean) {
   const packer = new MaxRectsPacker(paper.width, paper.height, paper.gap, {
     border: paper.margin,
     smart: false,
     pot: false,
     square: false,
-    // TODO: when config has allowRotation run both paths and see if page count is still the same.
-    // If so prefer the path without rotation.
-    allowRotation: paper.allowRotation,
+    allowRotation,
   });
 
-  for (const image of images()) {
+  for (const image of imageList) {
     const aspectRatio = image.height / image.width;
     const proportionalHeight = imageConfig.width * aspectRatio;
     packer.add(imageConfig.width, proportionalHeight, image);
   }
 
   return packer.bins;
+}
+
+const bins = createProjection(async () => {
+  const imageList = images();
+  const unrotatedBins = packImages(imageList, false);
+
+  if (!paper.allowRotation) {
+    return unrotatedBins;
+  }
+
+  const rotatedBins = packImages(imageList, true);
+
+  if (rotatedBins.length < unrotatedBins.length) {
+    return rotatedBins;
+  }
+
+  return unrotatedBins;
 }, []);
 
 async function downloadPdfFromCurrentLayout() {
