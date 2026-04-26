@@ -1,6 +1,6 @@
 ## General
 
-Dont run the build on each change, I will do that myself. 
+Dont run the build on each change, I will do that myself. Don't even mention it.
 
 ## Technologies
 
