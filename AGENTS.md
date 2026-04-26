@@ -2,6 +2,10 @@
 
 Dont run the build on each change, I will do that myself. Don't even mention it.
 
+## Design
+
+See @DESIGN.md
+
 ## Technologies
 
 ### Solid JS

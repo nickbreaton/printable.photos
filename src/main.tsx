@@ -301,13 +301,17 @@ const selectedPaperPreset = createMemo(() => {
 function Sidebar() {
   const [saving, setSaving] = createOptimistic(false);
   const [downloading, setDownloading] = createOptimistic(false);
+  const controlClass =
+    "mt-1 w-full border border-input bg-background px-2 py-1 text-sm";
+  const labelClass = "block text-sm font-medium";
 
   return (
     <aside class="sticky top-5 flex max-h-[calc(100vh-2.5rem)] w-72 shrink-0 flex-col gap-5 overflow-auto border border-border bg-card p-5 text-card-foreground shadow-[0_1px_2px_rgb(0_0_0/0.08),0_8px_24px_rgb(0_0_0/0.04)]">
-      <fieldset>
-        <label>
-          Paper:{" "}
+      <fieldset class="flex flex-col gap-3">
+        <label class={labelClass}>
+          Paper
           <select
+            class={controlClass}
             value={selectedPaperPreset()}
             onChange={(e) => {
               const selectedPreset = ALL_PAPER_PRESETS.find(
@@ -338,9 +342,10 @@ function Sidebar() {
             </For>
           </select>
         </label>
-        <label>
-          Width:{" "}
+        <label class={labelClass}>
+          Width
           <input
+            class={controlClass}
             type="number"
             step={1}
             value={paper.width}
@@ -349,9 +354,10 @@ function Sidebar() {
             }
           />
         </label>
-        <label>
-          Height:{" "}
+        <label class={labelClass}>
+          Height
           <input
+            class={controlClass}
             type="number"
             step={1}
             value={paper.height}
@@ -360,9 +366,10 @@ function Sidebar() {
             }
           />
         </label>
-        <label>
-          Margin:{" "}
+        <label class={labelClass}>
+          Margin
           <input
+            class={controlClass}
             type="number"
             step={0.25}
             value={paper.margin}
@@ -371,9 +378,10 @@ function Sidebar() {
             }
           />
         </label>
-        <label>
-          Gap:{" "}
+        <label class={labelClass}>
+          Gap
           <input
+            class={controlClass}
             type="number"
             step={0.25}
             value={paper.gap}
@@ -382,9 +390,10 @@ function Sidebar() {
             }
           />
         </label>
-        <label>
-          Units:{" "}
+        <label class={labelClass}>
+          Units
           <select
+            class={controlClass}
             value={paper.units}
             onChange={(e) =>
               setPaper(
@@ -399,7 +408,7 @@ function Sidebar() {
             <option value="mm">Millimeters</option>
           </select>
         </label>
-        <label style={{ "white-space": "nowrap" }}>
+        <label class="flex items-center gap-2 text-sm font-medium">
           <input
             type="checkbox"
             checked={paper.allowRotation}
@@ -410,10 +419,11 @@ function Sidebar() {
           Allow rotation
         </label>
       </fieldset>
-      <fieldset>
-        <label>
-          Image width:{" "}
+      <fieldset class="flex flex-col gap-3 border-t border-border pt-5">
+        <label class={labelClass}>
+          Image width
           <input
+            class={controlClass}
             type="number"
             step={1}
             value={imageConfig.width}
@@ -426,8 +436,9 @@ function Sidebar() {
           />
         </label>
       </fieldset>
-      <fieldset>
+      <fieldset class="border-t border-border pt-5">
         <input
+          class="w-full text-sm file:mr-3 file:border file:border-input file:bg-background file:px-3 file:py-1 file:text-sm"
           type="file"
           multiple
           disabled={isPending(imageKeys) || saving()}
@@ -461,7 +472,7 @@ function Sidebar() {
       </fieldset>
       <button
         type="button"
-        class="download-button"
+        class="border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
         // TODO: renable this, seems like a solid beta bug
         // disabled={downloading()}
         onClick={action(function* () {
