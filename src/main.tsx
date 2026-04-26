@@ -298,6 +298,9 @@ const selectedPaperPreset = createMemo(() => {
   return matchingPreset?.value ?? "Custom";
 });
 
+const cardSurfaceClass =
+  "bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10";
+
 function Sidebar() {
   const [saving, setSaving] = createOptimistic(false);
   const [downloading, setDownloading] = createOptimistic(false);
@@ -306,7 +309,9 @@ function Sidebar() {
   const labelClass = "block text-sm font-medium";
 
   return (
-    <aside class="sticky top-5 flex max-h-[calc(100vh-2.5rem)] w-72 shrink-0 flex-col gap-5 overflow-auto border border-border bg-card p-5 text-card-foreground shadow-[0_1px_2px_rgb(0_0_0/0.08),0_8px_24px_rgb(0_0_0/0.04)]">
+    <aside
+      class={`sticky top-5 flex max-h-[calc(100vh-2.5rem)] w-72 shrink-0 flex-col gap-5 overflow-auto p-5 ${cardSurfaceClass}`}
+    >
       <fieldset class="flex flex-col gap-3">
         <label class={labelClass}>
           Paper
@@ -525,7 +530,7 @@ function Pages() {
       <For each={bins}>
         {(bin) => (
           <div
-            class="relative mx-auto w-full overflow-hidden border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.08),0_8px_24px_rgb(0_0_0/0.04)]"
+            class={`relative mx-auto w-full overflow-hidden ${cardSurfaceClass}`}
             style={`aspect-ratio: ${paper.width / paper.height}; max-width: ${paper.width}${paper.units};`}
           >
             <For each={bin().rects}>
