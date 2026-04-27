@@ -530,9 +530,10 @@ function Pages() {
             <For each={bin().rects}>
               {(rect) => (
                 <AsyncImage
-                  class="block object-cover visible [dynamic-range-limit:standard]"
+                  class="block object-cover visible [dynamic-range-limit:standard] select-none"
                   src={rect().data.url}
                   style={getPhotoStyle(rect(), paper)}
+                  draggable="false"
                 />
               )}
             </For>
