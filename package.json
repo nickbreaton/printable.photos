@@ -17,6 +17,8 @@
     "clsx": "^2.1.1",
     "localforage": "^1.10.0",
     "maxrects-packer": "^2.7.3",
+    "oxfmt": "^0.46.0",
+    "oxlint": "^1.61.0",
     "pdf-lib": "^1.17.1",
     "pica": "^9.0.1",
     "shadcn": "^4.5.0",
