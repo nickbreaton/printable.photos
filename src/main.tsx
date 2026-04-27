@@ -20,6 +20,7 @@ import {
   createOptimistic,
   type JSX,
   createProjection,
+  snapshot,
 } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 
@@ -342,7 +343,7 @@ function Sidebar() {
         disabled={downloading()}
         onClick={action(function* () {
           setDownloading(true);
-          yield downloadPdfFromCurrentLayout({ bins: bins(), paper });
+          yield downloadPdfFromCurrentLayout({ bins: [...bins], paper });
         })}
       >
         Download PDF

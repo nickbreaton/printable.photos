@@ -1,4 +1,4 @@
-import type { MaxRectsBin, Rectangle } from "maxrects-packer";
+import type { Bin, Rectangle } from "maxrects-packer";
 import picaFactory from "pica";
 import { PDFDocument } from "pdf-lib";
 
@@ -16,7 +16,7 @@ interface PaperLayout {
 }
 
 interface DownloadPdfFromCurrentLayoutOptions {
-  bins: MaxRectsBin<Rectangle>[];
+  bins: Bin<Rectangle>[];
   paper: PaperLayout;
 }
 
