@@ -20,7 +20,6 @@ import {
   createOptimistic,
   type JSX,
   createProjection,
-  snapshot,
 } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 

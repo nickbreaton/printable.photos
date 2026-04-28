@@ -25,13 +25,13 @@ export interface Project {
   id: string;
   name: string;
   settings: ProjectSettings;
+  images: ProjectImage[];
   createdAt: number;
   updatedAt: number;
 }
 
 export interface ProjectImage {
   id: string;
-  projectId: string;
   order: number;
   name: string;
   type: string;
@@ -44,10 +44,9 @@ export interface ProjectImage {
 
 export interface ProjectData {
   project: Project;
-  images: ProjectImage[];
 }
 
-const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
+export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   paper: {
     width: 8.5,
     height: 11,
@@ -64,14 +63,12 @@ const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
 
 class PrintablePhotosDatabase extends Dexie {
   projects!: EntityTable<Project, "id">;
-  images!: EntityTable<ProjectImage, "id">;
 
   constructor() {
     super("printablePhotos");
 
     this.version(1).stores({
       projects: "id, createdAt, updatedAt",
-      images: "id, projectId, [projectId+order], createdAt, updatedAt",
     });
   }
 }
