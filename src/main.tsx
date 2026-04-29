@@ -123,7 +123,6 @@ interface ImageRef extends ProjectImage {
 }
 
 const images = createMemo<ImageRef[]>(() => {
-  console.log(snapshot(project.images[0].blob));
   return project.images.map((image) => {
     const blobUrl = URL.createObjectURL(snapshot(image.blob));
 
@@ -137,7 +136,7 @@ const addImages = action(function* (files: FileList) {
   const nextImages: ProjectImage[] = [];
 
   for (const file of files) {
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(snapshot(file));
     const img = yield createImage(url);
     URL.revokeObjectURL(url);
     const now = Date.now();
@@ -156,7 +155,8 @@ const addImages = action(function* (files: FileList) {
   }
 
   const promisish = db.table("projects").update("DEFAULT", {
-    images: [...project.images, ...nextImages],
+    images: [...snapshot(project.images), ...nextImages],
+    // TODO: do we actually need updated at?
     updatedAt: Date.now(),
   });
   yield Promise.resolve(promisish);
