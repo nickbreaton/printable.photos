@@ -87,6 +87,14 @@ class PrintablePhotosDatabase extends Dexie {
     this.on("populate", (transaction) => {
       transaction.table("projects").add(createDefaultProject());
     });
+
+    this.projects.hook("creating", (_primaryKey, project) => {
+      project.updatedAt = Date.now();
+    });
+
+    this.projects.hook("updating", () => {
+      return { updatedAt: Date.now() };
+    });
   }
 }
 

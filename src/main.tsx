@@ -159,8 +159,6 @@ const addImages = action(function* (files: FileList) {
 
   const promisish = db.table("projects").update("DEFAULT", {
     images: [...snapshot(project.images), ...nextImages],
-    // TODO: do we actually need updated at?
-    updatedAt: Date.now(),
   });
   yield Promise.resolve(promisish);
   refresh(project);
