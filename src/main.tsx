@@ -350,7 +350,10 @@ function Sidebar() {
         disabled={downloading()}
         onClick={action(function* () {
           setDownloading(true);
-          yield downloadPdfFromCurrentLayout({ bins: [...bins], paper });
+          yield downloadPdfFromCurrentLayout({
+            bins: [...bins],
+            paper: paper(),
+          });
         })}
       >
         Download PDF
