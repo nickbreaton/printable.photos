@@ -18,6 +18,7 @@ import {
   type JSX,
   createProjection,
   snapshot,
+  mapArray,
 } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 import {
@@ -122,15 +123,17 @@ interface ImageRef extends ProjectImage {
   url: string;
 }
 
-const images = createMemo<ImageRef[]>(() => {
-  return project.images.map((image) => {
-    const blobUrl = URL.createObjectURL(snapshot(image.blob));
+const images = mapArray<ProjectImage, ImageRef>(
+  () => project.images,
+  (image) => {
+    const blobUrl = URL.createObjectURL(snapshot(image().blob));
 
     onCleanup(() => URL.revokeObjectURL(blobUrl));
 
-    return { ...image, url: blobUrl };
-  });
-});
+    return { ...image(), url: blobUrl };
+  },
+  { keyed: (image) => image.id },
+);
 
 const addImages = action(function* (files: FileList) {
   const nextImages: ProjectImage[] = [];
