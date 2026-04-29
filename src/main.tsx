@@ -22,15 +22,7 @@ import {
   createProjection,
 } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
-
-interface Paper {
-  width: number;
-  height: number;
-  margin: number;
-  gap: number;
-  units: "in" | "mm";
-  allowRotation: boolean;
-}
+import { db, type PaperSettings, type Project } from "./data";
 
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
@@ -70,13 +62,24 @@ function createImage(src: string) {
   });
 }
 
-const [paper, setPaper] = createStore<Paper>({
-  width: 8.5,
-  height: 11,
-  margin: 0.25,
-  gap: 0.25,
-  units: "in",
-  allowRotation: false,
+const project = createProjection((): Promise<Project> => {
+  return db.table("projects").get("DEFAULT");
+}, {} as Project);
+
+const paper = createMemo(() => {
+  return project.settings.paper;
+});
+
+const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
+  const nestedUpdateEntries = Object.entries(newPaper).map(([key, value]) => [
+    `settings.paper.${key}`,
+    value,
+  ]);
+  const promisish = db
+    .table("projects")
+    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+  yield Promise.resolve(promisish);
+  refresh(project);
 });
 
 const [imageConfig, setImageConfig] = createStore({
@@ -130,13 +133,18 @@ const images = createMemo<ImageRef[]>(() => {
 });
 
 function packImages(imageList: ImageRef[], allowRotation: boolean) {
-  const packer = new MaxRectsPacker(paper.width, paper.height, paper.gap, {
-    border: paper.margin,
-    smart: false,
-    pot: false,
-    square: false,
-    allowRotation,
-  });
+  const packer = new MaxRectsPacker(
+    paper().width,
+    paper().height,
+    paper().gap,
+    {
+      border: paper().margin,
+      smart: false,
+      pot: false,
+      square: false,
+      allowRotation,
+    },
+  );
 
   for (const image of imageList) {
     const aspectRatio = image.height / image.width;
@@ -151,7 +159,7 @@ const bins = createProjection(async () => {
   const imageList = images();
   const unrotatedBins = packImages(imageList, false);
 
-  if (!paper.allowRotation) {
+  if (!paper().allowRotation) {
     return unrotatedBins;
   }
 
@@ -166,7 +174,7 @@ const bins = createProjection(async () => {
 
 const selectedPaperPreset = createMemo(() => {
   const matchingPreset = ALL_PAPER_PRESETS.find((preset) => {
-    return preset.width === paper.width && preset.height === paper.height;
+    return preset.width === paper().width && preset.height === paper().height;
   });
 
   return matchingPreset?.value ?? "Custom";
@@ -197,9 +205,9 @@ function Sidebar() {
                 return;
               }
 
-              setPaper((paper) => {
-                paper.width = selectedPreset.width;
-                paper.height = selectedPreset.height;
+              setPaper({
+                width: selectedPreset.width,
+                height: selectedPreset.height,
               });
             }}
           >
@@ -222,10 +230,8 @@ function Sidebar() {
           <Input
             type="number"
             step={1}
-            value={paper.width}
-            onChange={(e) =>
-              setPaper((paper) => void (paper.width = e.target.valueAsNumber))
-            }
+            value={paper().width}
+            onChange={(e) => setPaper({ width: e.target.valueAsNumber })}
           />
         </FieldLabel>
         <FieldLabel>
@@ -233,10 +239,8 @@ function Sidebar() {
           <Input
             type="number"
             step={1}
-            value={paper.height}
-            onChange={(e) =>
-              setPaper((paper) => void (paper.height = e.target.valueAsNumber))
-            }
+            value={paper().height}
+            onChange={(e) => setPaper({ height: e.target.valueAsNumber })}
           />
         </FieldLabel>
         <FieldLabel>
@@ -244,10 +248,8 @@ function Sidebar() {
           <Input
             type="number"
             step={0.25}
-            value={paper.margin}
-            onChange={(e) =>
-              setPaper((paper) => void (paper.margin = e.target.valueAsNumber))
-            }
+            value={paper().margin}
+            onChange={(e) => setPaper({ margin: e.target.valueAsNumber })}
           />
         </FieldLabel>
         <FieldLabel>
@@ -255,20 +257,16 @@ function Sidebar() {
           <Input
             type="number"
             step={0.25}
-            value={paper.gap}
-            onChange={(e) =>
-              setPaper((paper) => void (paper.gap = e.target.valueAsNumber))
-            }
+            value={paper().gap}
+            onChange={(e) => setPaper({ gap: e.target.valueAsNumber })}
           />
         </FieldLabel>
         <FieldLabel>
           Units
           <Select
-            value={paper.units}
+            value={paper().units}
             onChange={(e) =>
-              setPaper(
-                (paper) => void (paper.units = e.target.value as "in" | "mm"),
-              )
+              setPaper({ units: e.target.value as PaperSettings["units"] })
             }
             disabled={
               true /* keep as inches until doing something smart for keeping same size but different units on selection */
@@ -280,10 +278,8 @@ function Sidebar() {
         </FieldLabel>
         <label class="flex items-center gap-2 text-sm font-medium">
           <Checkbox
-            checked={paper.allowRotation}
-            onChange={(e) =>
-              setPaper((paper) => void (paper.allowRotation = e.target.checked))
-            }
+            checked={paper().allowRotation}
+            onChange={(e) => setPaper({ allowRotation: e.target.checked })}
           />
           Allow rotation
         </label>
@@ -377,8 +373,8 @@ function Pages() {
           <div
             class={`relative mx-auto w-full overflow-hidden ${cardSurfaceClass}`}
             style={{
-              "aspect-ratio": paper.width / paper.height,
-              "max-width": `${paper.width}${paper.units}`,
+              "aspect-ratio": paper().width / paper().height,
+              "max-width": `${paper().width}${paper().units}`,
             }}
           >
             <For each={bin().rects}>
@@ -386,7 +382,7 @@ function Pages() {
                 <AsyncImage
                   class="block object-cover visible [dynamic-range-limit:standard] select-none"
                   src={rect().data.url}
-                  style={getPhotoStyle(rect(), paper)}
+                  style={getPhotoStyle(rect(), paper())}
                   draggable="false"
                 />
               )}
@@ -400,24 +396,26 @@ function Pages() {
 
 function App() {
   return (
-    <Loading>
-      <div class="pointer-events-none fixed inset-0 bg-muted" />
-      <style>
-        {
-          /* css */ `
+    <>
+      <Loading>
+        <div class="pointer-events-none fixed inset-0 bg-muted" />
+        <style>
+          {
+            /* css */ `
           @page {
-            size: ${paper.width}${paper.units} ${paper.height}${paper.units};
+            size: ${paper().width}${paper().units} ${paper().height}${paper().units};
             margin: 0;
           }`
-        }
-      </style>
-      <div class="relative z-0 flex items-start gap-5">
-        <Sidebar />
-        <main class="min-w-0 flex-1">
-          <Pages />
-        </main>
-      </div>
-    </Loading>
+          }
+        </style>
+        <div class="relative z-0 flex items-start gap-5">
+          <Sidebar />
+          <main class="min-w-0 flex-1">
+            <Pages />
+          </main>
+        </div>
+      </Loading>
+    </>
   );
 }
 

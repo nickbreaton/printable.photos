@@ -61,6 +61,19 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   },
 };
 
+export function createDefaultProject(): Project {
+  const now = Date.now();
+
+  return {
+    id: "DEFAULT",
+    name: "Untitled project",
+    settings: structuredClone(DEFAULT_PROJECT_SETTINGS),
+    images: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 class PrintablePhotosDatabase extends Dexie {
   projects!: EntityTable<Project, "id">;
 
@@ -69,6 +82,10 @@ class PrintablePhotosDatabase extends Dexie {
 
     this.version(1).stores({
       projects: "id, createdAt, updatedAt",
+    });
+
+    this.on("populate", (transaction) => {
+      transaction.table("projects").add(createDefaultProject());
     });
   }
 }
