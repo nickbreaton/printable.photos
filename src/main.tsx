@@ -11,7 +11,6 @@ import { Select } from "./components/Select";
 import {
   action,
   createMemo,
-  createStore,
   For,
   isPending,
   Loading,
@@ -22,7 +21,12 @@ import {
   createProjection,
 } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
-import { db, type PaperSettings, type Project } from "./data";
+import {
+  db,
+  type ImageSettings,
+  type PaperSettings,
+  type Project,
+} from "./data";
 
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
@@ -82,8 +86,21 @@ const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
   refresh(project);
 });
 
-const [imageConfig, setImageConfig] = createStore({
-  width: 3,
+const imageConfig = createMemo(() => {
+  return project.settings.image;
+});
+
+const setImageConfig = action(function* (
+  newImageConfig: Partial<ImageSettings>,
+) {
+  const nestedUpdateEntries = Object.entries(newImageConfig).map(
+    ([key, value]) => [`settings.image.${key}`, value],
+  );
+  const promisish = db
+    .table("projects")
+    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+  yield Promise.resolve(promisish);
+  refresh(project);
 });
 
 const PAPER_PRESETS = {
@@ -148,8 +165,8 @@ function packImages(imageList: ImageRef[], allowRotation: boolean) {
 
   for (const image of imageList) {
     const aspectRatio = image.height / image.width;
-    const proportionalHeight = imageConfig.width * aspectRatio;
-    packer.add(imageConfig.width, proportionalHeight, image);
+    const proportionalHeight = imageConfig().width * aspectRatio;
+    packer.add(imageConfig().width, proportionalHeight, image);
   }
 
   return packer.bins;
@@ -290,13 +307,8 @@ function Sidebar() {
           <Input
             type="number"
             step={1}
-            value={imageConfig.width}
-            onChange={(e) =>
-              setImageConfig(
-                (imageConfig) =>
-                  void (imageConfig.width = e.target.valueAsNumber),
-              )
-            }
+            value={imageConfig().width}
+            onChange={(e) => setImageConfig({ width: e.target.valueAsNumber })}
           />
         </FieldLabel>
       </fieldset>
