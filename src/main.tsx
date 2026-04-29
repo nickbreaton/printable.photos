@@ -1,9 +1,8 @@
 import { render } from "@solidjs/web";
-import localforage from "localforage";
 
 import "./style.css";
 import { Checkbox } from "./components/Checkbox";
-import { downloadPdfFromCurrentLayout, type StoredImage } from "./download";
+import { downloadPdfFromCurrentLayout } from "./download";
 import { FieldLabel } from "./components/FieldLabel";
 import { FileInput } from "./components/FileInput";
 import { Input } from "./components/Input";
@@ -12,13 +11,13 @@ import {
   action,
   createMemo,
   For,
-  isPending,
   Loading,
   onCleanup,
   refresh,
   createOptimistic,
   type JSX,
   createProjection,
+  snapshot,
 } from "solid-js";
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 import {
@@ -26,6 +25,7 @@ import {
   type ImageSettings,
   type PaperSettings,
   type Project,
+  type ProjectImage,
 } from "./data";
 
 function toPercent(value: number, total: number) {
@@ -118,35 +118,49 @@ const PAPER_PRESETS = {
 
 const ALL_PAPER_PRESETS = Object.values(PAPER_PRESETS).flat();
 
-const imageKeys = createMemo<string[]>(async () => {
-  return await localforage.keys();
-});
-
-interface ImageRef {
+interface ImageRef extends ProjectImage {
   url: string;
-  width: number;
-  height: number;
-  name: string;
 }
 
-const imageBlobs = createMemo<StoredImage[]>(async () => {
-  const promises = imageKeys().map((key) => {
-    return localforage.getItem<StoredImage>(key);
-  });
-  const storedImages = await Promise.all(promises);
-
-  return storedImages.filter((image): image is StoredImage => image !== null);
-});
-
 const images = createMemo<ImageRef[]>(() => {
-  return imageBlobs().map((image) => {
-    const { file, ...props } = image;
-    const blobUrl = URL.createObjectURL(file);
+  console.log(snapshot(project.images[0].blob));
+  return project.images.map((image) => {
+    const blobUrl = URL.createObjectURL(snapshot(image.blob));
 
     onCleanup(() => URL.revokeObjectURL(blobUrl));
 
-    return { url: blobUrl, ...props };
+    return { ...image, url: blobUrl };
   });
+});
+
+const addImages = action(function* (files: FileList) {
+  const nextImages: ProjectImage[] = [];
+
+  for (const file of files) {
+    const url = URL.createObjectURL(file);
+    const img = yield createImage(url);
+    URL.revokeObjectURL(url);
+    const now = Date.now();
+
+    nextImages.push({
+      id: crypto.randomUUID(),
+      order: project.images.length + nextImages.length,
+      name: file.name,
+      type: file.type,
+      width: img.width,
+      height: img.height,
+      blob: file,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  const promisish = db.table("projects").update("DEFAULT", {
+    images: [...project.images, ...nextImages],
+    updatedAt: Date.now(),
+  });
+  yield Promise.resolve(promisish);
+  refresh(project);
 });
 
 function packImages(imageList: ImageRef[], allowRotation: boolean) {
@@ -315,28 +329,15 @@ function Sidebar() {
       <fieldset class="border-t border-border pt-5">
         <FileInput
           multiple
-          disabled={isPending(imageKeys) || saving()}
+          disabled={saving()}
           onChange={action(function* (event) {
             setSaving(true);
 
-            const files = event.target.files ?? [];
-
-            // TODO: concurrency
-            for (const file of files) {
-              const url = URL.createObjectURL(file);
-              const img = yield createImage(url);
-              const width = img.width;
-              const height = img.height;
-              const name = file.name;
-              yield localforage.setItem<StoredImage>(crypto.randomUUID(), {
-                file,
-                width,
-                height,
-                name,
-              });
+            const files = event.target.files;
+            if (!files) {
+              return;
             }
-
-            refresh(imageKeys);
+            yield addImages(files);
 
             // Hold until fully refreshed so UI doesnt tear resetting DOM directly
             // yield resolve(() => Object.keys(bins));

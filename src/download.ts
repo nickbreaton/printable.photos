@@ -1,13 +1,7 @@
 import type { Bin, Rectangle } from "maxrects-packer";
 import picaFactory from "pica";
 import { PDFDocument } from "pdf-lib";
-
-export interface StoredImage {
-  file: File;
-  width: number;
-  height: number;
-  name: string;
-}
+import type { ProjectImage } from "./data";
 
 interface PaperLayout {
   width: number;
@@ -40,14 +34,14 @@ export async function downloadPdfFromCurrentLayout(
     const page = pdf.addPage([pageWidthPt, pageHeightPt]);
 
     for (const rect of bin.rects) {
-      const { file } = rect.data as StoredImage;
+      const { blob } = rect.data as ProjectImage;
 
       const placedWidthInches = toInches(rect.width);
       const placedHeightInches = toInches(rect.height);
       const targetPxW = Math.max(1, Math.ceil(placedWidthInches * 300));
       const targetPxH = Math.max(1, Math.ceil(placedHeightInches * 300));
 
-      const sourceBitmap = await createImageBitmap(file);
+      const sourceBitmap = await createImageBitmap(blob);
 
       const sourceCanvas = document.createElement("canvas");
       sourceCanvas.width = sourceBitmap.width;
@@ -132,7 +126,7 @@ export async function downloadPdfFromCurrentLayout(
         pdfImageCanvas = rotatedCanvas;
       }
 
-      const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+      const mimeType = blob.type === "image/png" ? "image/png" : "image/jpeg";
       const resizedBlob = await pica.toBlob(
         pdfImageCanvas,
         mimeType,

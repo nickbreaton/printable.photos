@@ -16,7 +16,6 @@
     "@types/pica": "^9.0.5",
     "clsx": "^2.1.1",
     "dexie": "^4.4.2",
-    "localforage": "^1.10.0",
     "maxrects-packer": "^2.7.3",
     "oxfmt": "^0.46.0",
     "oxlint": "^1.61.0",
