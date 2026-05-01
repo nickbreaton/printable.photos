@@ -1,4 +1,5 @@
 import { render } from "@solidjs/web";
+import type { JSX } from "@solidjs/web";
 
 import "./style.css";
 import { Checkbox } from "./components/Checkbox";
@@ -15,7 +16,6 @@ import {
   onCleanup,
   refresh,
   createOptimistic,
-  type JSX,
   createProjection,
   snapshot,
   mapArray,
