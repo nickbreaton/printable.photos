@@ -133,11 +133,7 @@ const projectImages = createProjection(async (): Promise<ProjectImage[]> => {
     return [];
   }
 
-  return db
-    .images
-    .where("projectId")
-    .equals(project.id)
-    .sortBy("order");
+  return db.images.where("projectId").equals(project.id).sortBy("order");
 }, []);
 
 const images = mapArray<ProjectImage, ImageRef>(
@@ -470,16 +466,6 @@ function App() {
   return (
     <>
       <Loading>
-        <div class="pointer-events-none fixed inset-0 bg-muted" />
-        <style>
-          {
-            /* css */ `
-          @page {
-            size: ${paper().width}${paper().units} ${paper().height}${paper().units};
-            margin: 0;
-          }`
-          }
-        </style>
         <div class="relative z-0 flex items-start gap-5">
           <Sidebar />
           <main class="min-w-0 flex-1">
