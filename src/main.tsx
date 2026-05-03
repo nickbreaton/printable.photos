@@ -464,7 +464,7 @@ function Pages() {
               {(rect) => (
                 <button
                   type="button"
-                  class="group/photo block overflow-hidden border-0 bg-transparent p-0 outline-0 transition-[outline-color,outline-width,opacity] hover:outline-[4px] hover:outline-ring hover:opacity-95 focus-visible:outline-[4px] focus-visible:outline-ring focus-visible:opacity-95"
+                  class="group/photo block overflow-hidden border-0 bg-transparent p-0 outline-0 transition-[outline-color,outline-width,opacity] hover:outline-[4px] hover:outline-ring/50 hover:opacity-95 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
                   style={getPhotoStyle(rect(), paper())}
                   title="Delete image"
                   onClick={() => deleteImage(rect().data.id)}
