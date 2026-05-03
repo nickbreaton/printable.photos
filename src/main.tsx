@@ -23,6 +23,7 @@ import {
 import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
 import {
   db,
+  type ImageShape,
   type ImageSettings,
   type PaperSettings,
   type Project,
@@ -180,8 +181,11 @@ function packImages(imageList: ImageRef[], allowRotation: boolean) {
 
   for (const image of imageList) {
     const aspectRatio = image.height / image.width;
-    const proportionalHeight = imageConfig().width * aspectRatio;
-    packer.add(imageConfig().width, proportionalHeight, image);
+    const height =
+      imageConfig().shape === "square"
+        ? imageConfig().width
+        : imageConfig().width * aspectRatio;
+    packer.add(imageConfig().width, height, image);
   }
 
   return packer.bins;
@@ -317,6 +321,18 @@ function Sidebar() {
         </label>
       </fieldset>
       <fieldset class="flex flex-col gap-3 border-t border-border pt-5">
+        <FieldLabel>
+          Image shape
+          <Select
+            value={imageConfig().shape}
+            onChange={(e) =>
+              setImageConfig({ shape: e.target.value as ImageShape })
+            }
+          >
+            <option value="original">Original</option>
+            <option value="square">Square</option>
+          </Select>
+        </FieldLabel>
         <FieldLabel>
           Image width
           <Input
