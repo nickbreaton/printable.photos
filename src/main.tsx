@@ -462,24 +462,19 @@ function Pages() {
           >
             <For each={bin().rects}>
               {(rect) => (
-                <div
-                  class="group/photo overflow-hidden"
+                <button
+                  type="button"
+                  class="group/photo block overflow-hidden border-0 bg-transparent p-0 outline-0 transition-[outline-color,outline-width,opacity] hover:outline-[4px] hover:outline-ring hover:opacity-95 focus-visible:outline-[4px] focus-visible:outline-ring focus-visible:opacity-95"
                   style={getPhotoStyle(rect(), paper())}
+                  title="Delete image"
+                  onClick={() => deleteImage(rect().data.id)}
                 >
                   <AsyncImage
                     class="block size-full object-cover visible [dynamic-range-limit:standard] select-none"
                     src={rect().data.url}
                     draggable="false"
                   />
-                  <button
-                    type="button"
-                    class="absolute right-1 top-1 grid size-8 place-items-center border border-background/80 bg-background/90 opacity-0 shadow-sm hover:bg-muted cursor-pointer focus-visible:opacity-100 group-hover/photo:opacity-100"
-                    title="Delete image"
-                    onClick={() => deleteImage(rect().data.id)}
-                  >
-                    <Icon icon={Trash2} />
-                  </button>
-                </div>
+                </button>
               )}
             </For>
           </div>
