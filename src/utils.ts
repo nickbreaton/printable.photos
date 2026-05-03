@@ -3,6 +3,7 @@ import picaFactory from "pica";
 import { twMerge } from "tailwind-merge";
 
 const pica = picaFactory();
+const PREVIEW_SOFTEN_PX = 0.5;
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,11 +42,18 @@ export async function createPreviewBlob(
   previewCanvas.height = targetHeight;
 
   await pica.resize(sourceCanvas, previewCanvas, {
-    quality: 3,
-    unsharpAmount: 80,
-    unsharpRadius: 0.6,
-    unsharpThreshold: 2,
+    filter: "hamming",
   });
 
-  return pica.toBlob(previewCanvas, "image/jpeg", 0.88);
+  const softenedCanvas = document.createElement("canvas");
+  softenedCanvas.width = targetWidth;
+  softenedCanvas.height = targetHeight;
+  const softenedContext = softenedCanvas.getContext("2d");
+  if (!softenedContext) {
+    throw new Error("Failed to create softened preview canvas context");
+  }
+  softenedContext.filter = `blur(${PREVIEW_SOFTEN_PX}px)`;
+  softenedContext.drawImage(previewCanvas, 0, 0);
+
+  return pica.toBlob(softenedCanvas, "image/jpeg", 0.95);
 }

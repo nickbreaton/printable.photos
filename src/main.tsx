@@ -33,8 +33,8 @@ import {
 } from "./data";
 import { createPreviewBlob } from "./utils";
 
-const PREVIEW_DPI = 300;
-const MAX_PREVIEW_EDGE_PX = 3600;
+const PREVIEW_DPI = 160;
+const MAX_PREVIEW_EDGE_PX = 1600;
 
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
