@@ -439,7 +439,7 @@ function Pages() {
       <For each={bins}>
         {(bin) => (
           <div
-            class={`relative mx-auto w-full overflow-hidden ${cardSurfaceClass}`}
+            class={`relative mx-auto w-full overflow-hidden min-w-3xs ${cardSurfaceClass}`}
             style={{
               "aspect-ratio": paper().width / paper().height,
               "max-width": `${paper().width}${paper().units}`,
