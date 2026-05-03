@@ -226,7 +226,7 @@ function packImages(imageList: ImageRef[], allowRotation: boolean) {
   return packer.bins;
 }
 
-const bins = createProjection(async () => {
+const bins = createProjection(() => {
   const imageList = images();
   const unrotatedBins = packImages(imageList, false);
 
