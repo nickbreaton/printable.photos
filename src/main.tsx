@@ -207,7 +207,6 @@ function packImages(imageList: ImageRef[], allowRotation: boolean) {
     paper().gap,
     {
       border: paper().margin,
-      smart: false,
       pot: false,
       square: false,
       allowRotation,
