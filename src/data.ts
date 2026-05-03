@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
+import type { Transaction } from "dexie";
 
 export interface PaperSettings {
   width: number;
@@ -25,13 +26,13 @@ export interface Project {
   id: string;
   name: string;
   settings: ProjectSettings;
-  images: ProjectImage[];
   createdAt: number;
   updatedAt: number;
 }
 
 export interface ProjectImage {
   id: string;
+  projectId: string;
   order: number;
   name: string;
   type: string;
@@ -45,6 +46,7 @@ export interface ProjectImage {
 
 export interface ProjectData {
   project: Project;
+  images: ProjectImage[];
 }
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
@@ -69,7 +71,6 @@ export function createDefaultProject(): Project {
     id: "DEFAULT",
     name: "Untitled project",
     settings: structuredClone(DEFAULT_PROJECT_SETTINGS),
-    images: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -77,12 +78,14 @@ export function createDefaultProject(): Project {
 
 class PrintablePhotosDatabase extends Dexie {
   projects!: EntityTable<Project, "id">;
+  images!: EntityTable<ProjectImage, "id">;
 
   constructor() {
     super("printablePhotos");
 
     this.version(1).stores({
-      projects: "id, createdAt, updatedAt",
+      projects: "id",
+      images: "id, projectId, [projectId+order]",
     });
 
     this.on("populate", (transaction) => {
@@ -95,6 +98,34 @@ class PrintablePhotosDatabase extends Dexie {
 
     this.projects.hook("updating", () => {
       return { updatedAt: Date.now() };
+    });
+
+    this.projects.hook("deleting", (primaryKey, _project, transaction) => {
+      return transaction
+        .table("images")
+        .where("projectId")
+        .equals(primaryKey)
+        .delete();
+    });
+
+    const touchProject = (projectId: string, transaction: Transaction) => {
+      return transaction.table("projects").update(projectId, {
+        updatedAt: Date.now(),
+      });
+    };
+
+    this.images.hook("creating", (_primaryKey, image, transaction) => {
+      image.updatedAt = Date.now();
+      touchProject(image.projectId, transaction);
+    });
+
+    this.images.hook("updating", (_mods, _primaryKey, image, transaction) => {
+      touchProject(image.projectId, transaction);
+      return { updatedAt: Date.now() };
+    });
+
+    this.images.hook("deleting", (_primaryKey, image, transaction) => {
+      return touchProject(image.projectId, transaction);
     });
   }
 }

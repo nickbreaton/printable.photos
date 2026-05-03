@@ -128,8 +128,20 @@ interface ImageRef extends ProjectImage {
   url: string;
 }
 
+const projectImages = createProjection(async (): Promise<ProjectImage[]> => {
+  if (!project.id) {
+    return [];
+  }
+
+  return db
+    .images
+    .where("projectId")
+    .equals(project.id)
+    .sortBy("order");
+}, []);
+
 const images = mapArray<ProjectImage, ImageRef>(
-  () => project.images,
+  () => projectImages,
   (image) => {
     const blob = snapshot(image().previewBlob ?? image().blob);
     const blobUrl = URL.createObjectURL(blob);
@@ -143,6 +155,12 @@ const images = mapArray<ProjectImage, ImageRef>(
 
 const addImages = action(function* (files: FileList) {
   const nextImages: ProjectImage[] = [];
+  const currentProjectId = snapshot(project.id);
+  const currentImages = snapshot(projectImages);
+  const nextOrder =
+    currentImages.reduce((maxOrder: number, image: ProjectImage) => {
+      return Math.max(maxOrder, image.order);
+    }, -1) + 1;
   const paperMaxInches =
     paper().units === "mm"
       ? Math.max(paper().width, paper().height) / 25.4
@@ -161,7 +179,8 @@ const addImages = action(function* (files: FileList) {
 
     nextImages.push({
       id: crypto.randomUUID(),
-      order: project.images.length + nextImages.length,
+      projectId: currentProjectId,
+      order: nextOrder + nextImages.length,
       name: file.name,
       type: file.type,
       width: img.width,
@@ -173,10 +192,15 @@ const addImages = action(function* (files: FileList) {
     });
   }
 
-  const promisish = db.table("projects").update("DEFAULT", {
-    images: [...snapshot(project.images), ...nextImages],
+  if (nextImages.length === 0) {
+    return;
+  }
+
+  const promisish = db.transaction("rw", db.projects, db.images, async () => {
+    await db.images.bulkAdd(nextImages);
   });
   yield Promise.resolve(promisish);
+  refresh(projectImages);
   refresh(project);
 });
 
