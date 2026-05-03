@@ -8,6 +8,7 @@ import { FieldLabel } from "./components/FieldLabel";
 import { FileInput } from "./components/FileInput";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
+import { Trash2 } from "lucide-static";
 import {
   action,
   createMemo,
@@ -259,6 +260,12 @@ const selectedPaperPreset = createMemo(() => {
   return matchingPreset?.value ?? "Custom";
 });
 
+const Icon = (props: { icon: string; size?: number }) => {
+  return (
+    <span style={{ scale: props.size ?? 16 / 24 }} innerHTML={props.icon} />
+  );
+};
+
 const cardSurfaceClass =
   "bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10";
 
@@ -441,27 +448,6 @@ function AsyncImage(props: JSX.ImgHTMLAttributes<HTMLImageElement>) {
   return <img {...props} src={src()} />;
 }
 
-function TrashIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      class="size-4"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <path d="M3 6h18" />
-      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-      <path d="M19 6l-1 14c0 1-1 2-2 2H8c-1 0-2-1-2-2L5 6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-    </svg>
-  );
-}
-
 function Pages() {
   return (
     <div class="flex flex-col gap-5">
@@ -491,7 +477,7 @@ function Pages() {
                     title="Delete image"
                     onClick={() => deleteImage(rect().data.id)}
                   >
-                    <TrashIcon />
+                    <Icon icon={Trash2} />
                   </button>
                 </div>
               )}
