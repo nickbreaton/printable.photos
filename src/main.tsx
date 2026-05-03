@@ -5,6 +5,7 @@ import "./style.css";
 import { Checkbox } from "./components/Checkbox";
 import { downloadPdfFromCurrentLayout } from "./download";
 import { FieldLabel } from "./components/FieldLabel";
+import { Dialog } from "./components/Dialog";
 import { FileInput } from "./components/FileInput";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
@@ -449,38 +450,45 @@ function AsyncImage(props: JSX.ImgHTMLAttributes<HTMLImageElement>) {
 }
 
 function Pages() {
+  let dialogRef: HTMLDialogElement;
+
   return (
-    <div class="flex flex-col gap-5">
-      <For each={bins}>
-        {(bin) => (
-          <div
-            class={`relative mx-auto w-full overflow-hidden min-w-3xs ${cardSurfaceClass}`}
-            style={{
-              "aspect-ratio": paper().width / paper().height,
-              "max-width": `${paper().width}${paper().units}`,
-            }}
-          >
-            <For each={bin().rects}>
-              {(rect) => (
-                <button
-                  type="button"
-                  class="group/photo block overflow-hidden border-0 bg-transparent p-0 outline-0 transition-[outline-color,outline-width,opacity] hover:outline-[4px] hover:outline-ring/50 hover:opacity-95 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
-                  style={getPhotoStyle(rect(), paper())}
-                  title="Delete image"
-                  onClick={() => deleteImage(rect().data.id)}
-                >
-                  <AsyncImage
-                    class="block size-full object-cover visible [dynamic-range-limit:standard] select-none"
-                    src={rect().data.url}
-                    draggable="false"
-                  />
-                </button>
-              )}
-            </For>
-          </div>
-        )}
-      </For>
-    </div>
+    <>
+      <Dialog ref={(el) => (dialogRef = el)}>
+        <p class="text-sm text-muted-foreground">test</p>
+      </Dialog>
+      <div class="flex flex-col gap-5">
+        <For each={bins}>
+          {(bin) => (
+            <div
+              class={`relative mx-auto w-full overflow-hidden min-w-3xs ${cardSurfaceClass}`}
+              style={{
+                "aspect-ratio": paper().width / paper().height,
+                "max-width": `${paper().width}${paper().units}`,
+              }}
+            >
+              <For each={bin().rects}>
+                {(rect) => (
+                  <button
+                    type="button"
+                    class="group/photo block overflow-hidden border-0 bg-transparent p-0 outline-0 transition-[outline-color,outline-width,opacity] hover:outline-[4px] hover:outline-ring/50 hover:opacity-95 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
+                    style={getPhotoStyle(rect(), paper())}
+                    title="Open image dialog"
+                    onClick={() => dialogRef.showModal()}
+                  >
+                    <AsyncImage
+                      class="block size-full object-cover visible [dynamic-range-limit:standard] select-none"
+                      src={rect().data.url}
+                      draggable="false"
+                    />
+                  </button>
+                )}
+              </For>
+            </div>
+          )}
+        </For>
+      </div>
+    </>
   );
 }
 
