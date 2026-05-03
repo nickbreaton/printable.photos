@@ -38,6 +38,7 @@ export interface ProjectImage {
   width: number;
   height: number;
   blob: Blob;
+  previewBlob?: Blob;
   createdAt: number;
   updatedAt: number;
 }

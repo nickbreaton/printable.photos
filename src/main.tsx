@@ -29,6 +29,10 @@ import {
   type Project,
   type ProjectImage,
 } from "./data";
+import { createPreviewBlob } from "./utils";
+
+const PREVIEW_DPI = 300;
+const MAX_PREVIEW_EDGE_PX = 3600;
 
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
@@ -127,7 +131,8 @@ interface ImageRef extends ProjectImage {
 const images = mapArray<ProjectImage, ImageRef>(
   () => project.images,
   (image) => {
-    const blobUrl = URL.createObjectURL(snapshot(image().blob));
+    const blob = snapshot(image().previewBlob ?? image().blob);
+    const blobUrl = URL.createObjectURL(blob);
 
     onCleanup(() => URL.revokeObjectURL(blobUrl));
 
@@ -138,11 +143,20 @@ const images = mapArray<ProjectImage, ImageRef>(
 
 const addImages = action(function* (files: FileList) {
   const nextImages: ProjectImage[] = [];
+  const paperMaxInches =
+    paper().units === "mm"
+      ? Math.max(paper().width, paper().height) / 25.4
+      : Math.max(paper().width, paper().height);
+  const maxPreviewEdgePx = Math.min(
+    MAX_PREVIEW_EDGE_PX,
+    Math.ceil(paperMaxInches * PREVIEW_DPI),
+  );
 
   for (const file of files) {
     const url = URL.createObjectURL(snapshot(file));
     const img = yield createImage(url);
     URL.revokeObjectURL(url);
+    const previewBlob = yield createPreviewBlob(file, img, maxPreviewEdgePx);
     const now = Date.now();
 
     nextImages.push({
@@ -153,6 +167,7 @@ const addImages = action(function* (files: FileList) {
       width: img.width,
       height: img.height,
       blob: file,
+      previewBlob,
       createdAt: now,
       updatedAt: now,
     });
