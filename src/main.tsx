@@ -200,6 +200,15 @@ const addImages = action(function* (files: FileList) {
   refresh(project);
 });
 
+const deleteImage = action(function* (imageId: string) {
+  const promisish = db.transaction("rw", db.projects, db.images, async () => {
+    await db.images.delete(imageId);
+  });
+  yield Promise.resolve(promisish);
+  refresh(projectImages);
+  refresh(project);
+});
+
 function packImages(imageList: ImageRef[], allowRotation: boolean) {
   const packer = new MaxRectsPacker(
     paper().width,
@@ -432,6 +441,27 @@ function AsyncImage(props: JSX.ImgHTMLAttributes<HTMLImageElement>) {
   return <img {...props} src={src()} />;
 }
 
+function TrashIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      class="size-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <path d="M19 6l-1 14c0 1-1 2-2 2H8c-1 0-2-1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+
 function Pages() {
   return (
     <div class="flex flex-col gap-5">
@@ -446,12 +476,24 @@ function Pages() {
           >
             <For each={bin().rects}>
               {(rect) => (
-                <AsyncImage
-                  class="block object-cover visible [dynamic-range-limit:standard] select-none"
-                  src={rect().data.url}
+                <div
+                  class="group/photo overflow-hidden"
                   style={getPhotoStyle(rect(), paper())}
-                  draggable="false"
-                />
+                >
+                  <AsyncImage
+                    class="block size-full object-cover visible [dynamic-range-limit:standard] select-none"
+                    src={rect().data.url}
+                    draggable="false"
+                  />
+                  <button
+                    type="button"
+                    class="absolute right-1 top-1 grid size-8 place-items-center border border-background/80 bg-background/90 opacity-0 shadow-sm hover:bg-muted cursor-pointer focus-visible:opacity-100 group-hover/photo:opacity-100"
+                    title="Delete image"
+                    onClick={() => deleteImage(rect().data.id)}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
               )}
             </For>
           </div>
