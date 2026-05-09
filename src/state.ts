@@ -179,7 +179,6 @@ export const saveImageCrop = action(function* (
   });
   yield Promise.resolve(promisish);
   refresh(projectImages);
-  refresh(project);
 });
 
 function packImages(
