@@ -1,6 +1,6 @@
 # Solid 2.0 Migration Notes
 
-Last updated: 2026-04-30
+Last updated: 2026-05-09
 
 This project is currently on:
 
@@ -168,6 +168,26 @@ Practical rule:
 - avoid assuming "set then immediately read" works the way Solid 1.x did
 - only use `flush()` when imperative code genuinely needs a settled state immediately
 
+## `mergeProps` To `merge`
+
+Solid 2.0 migration direction renames `mergeProps` to `merge`:
+
+```ts
+import { merge } from "solid-js";
+```
+
+Use `merge(...)` for reactive prop/object merging in app code.
+
+Why this can look inconsistent:
+
+- In this repo's current beta, `@solidjs/web` still exposes `mergeProps` for JSX/runtime compatibility.
+- Internally this maps to the same underlying `merge` behavior.
+
+Practical rule for this repo:
+
+- Prefer importing `merge` from `solid-js` in application/state code.
+- Treat `mergeProps` as compatibility/runtime surface, not the preferred API name.
+
 ## Top-Level Reactive Reads
 
 Solid 2.0 dev guidance warns on top-level reactive reads in component bodies.
@@ -227,6 +247,89 @@ Solid 2.0 is pushing toward async-first computations and `Loading` boundaries.
 
 The installed package already exports `Loading`.
 
+## Ref Composition Replaces `use:` Directives
+
+Solid 2.0 removes the `use:` directive namespace. The DOM RFC describes `ref` as the single composition point for:
+
+- direct DOM access: `ref={el => ...}`
+- reusable directive factories: `ref={tooltip(options)}`
+- composition of multiple refs/directives: `ref={[setEl, tooltip(options), autofocus()]}`
+
+Before:
+
+```tsx
+<button use:tooltip={props.label} ref={setButton}>
+  {props.children}
+</button>
+```
+
+After:
+
+```tsx
+<button ref={[setButton, tooltip(() => props.label)]}>
+  {props.children}
+</button>
+```
+
+Important details:
+
+- Use arrays when an element needs more than one ref behavior.
+- Ref arrays can be nested, so component code can merge its own ref with a forwarded `props.ref`.
+- Prefer factory calls for directive-like behavior: `ref={tooltip(options)}`.
+- If no options are needed, `ref={autofocus}` can still be a plain callback.
+- Keep the normal repo rule: do not destructure props just to pass directive inputs around.
+
+### Two-phase directive factories
+
+The Solid 2.0 recommendation is a two-phase pattern:
+
+- setup phase: owned; create signals, effects, subscriptions, or cleanup here
+- apply phase: unowned; receives the element and performs DOM wiring/writes
+
+Example:
+
+```ts
+function titleRef(source: () => string) {
+  let el: HTMLElement | undefined;
+
+  createEffect(source, value => {
+    if (el) el.title = value;
+  });
+
+  return (nextEl: HTMLElement) => {
+    el = nextEl;
+    el.title = source();
+  };
+}
+```
+
+Used as:
+
+```tsx
+<button ref={titleRef(() => props.title)}>
+  {props.children}
+</button>
+```
+
+Practical rules for this repo:
+
+- Do not create new reactive primitives inside the returned ref callback.
+- Do not do top-level imperative DOM mutation in the factory setup phase.
+- Put reactive reads in the setup/effect side and DOM attachment in the returned callback.
+- When forwarding refs through components, compose instead of choosing one ref:
+
+```tsx
+function Button(props) {
+  let local!: HTMLButtonElement;
+
+  return (
+    <button ref={[el => (local = el), props.ref]}>
+      {props.children}
+    </button>
+  );
+}
+```
+
 ## Other Migration Notes
 
 - DOM runtime imports move from `solid-js/web` to `@solidjs/web`.
@@ -242,6 +345,7 @@ The installed package already exports `Loading`.
   - https://github.com/solidjs/solid/releases
 - Solid 2.0 migration guide on Solid's `next` branch:
   - https://github.com/solidjs/solid/blob/next/documentation/solid-2.0/MIGRATION.md
+  - (Includes the `mergeProps` -> `merge` migration direction)
 - Solid 2.0 RFC for reactivity/batching/effects:
   - https://github.com/solidjs/solid/blob/next/documentation/solid-2.0/01-reactivity-batching-effects.md
 - Solid 2.0 RFC for DOM changes:

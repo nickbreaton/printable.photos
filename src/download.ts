@@ -1,7 +1,6 @@
-import type { Bin, Rectangle } from "maxrects-packer";
 import picaFactory from "pica";
 import { PDFDocument } from "pdf-lib";
-import type { ProjectImage } from "./data";
+import type { PackedImageBin } from "./layout";
 
 interface PaperLayout {
   width: number;
@@ -10,8 +9,9 @@ interface PaperLayout {
 }
 
 interface DownloadPdfFromCurrentLayoutOptions {
-  bins: Bin<Rectangle>[];
+  bins: PackedImageBin[];
   paper: PaperLayout;
+  images: { id: string; blob: Blob }[];
 }
 
 export async function downloadPdfFromCurrentLayout(
@@ -27,6 +27,7 @@ export async function downloadPdfFromCurrentLayout(
 
   const pdf = await PDFDocument.create();
   const pica = picaFactory();
+  const imagesById = new Map(options.images.map((image) => [image.id, image]));
 
   for (const bin of options.bins) {
     const pageWidthPt = toInches(options.paper.width) * 72;
@@ -34,7 +35,13 @@ export async function downloadPdfFromCurrentLayout(
     const page = pdf.addPage([pageWidthPt, pageHeightPt]);
 
     for (const rect of bin.rects) {
-      const { blob } = rect.data as ProjectImage;
+      const image = imagesById.get(rect.data.id);
+
+      if (!image) {
+        throw new Error(`Missing image for packed rectangle: ${rect.data.id}`);
+      }
+
+      const { blob } = image;
 
       const placedWidthInches = toInches(rect.width);
       const placedHeightInches = toInches(rect.height);

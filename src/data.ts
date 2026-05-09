@@ -30,6 +30,13 @@ export interface Project {
   updatedAt: number;
 }
 
+export interface CropCoordinates {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface ProjectImage {
   id: string;
   projectId: string;
@@ -40,6 +47,7 @@ export interface ProjectImage {
   height: number;
   blob: Blob;
   previewBlob?: Blob;
+  crops: Record<string, CropCoordinates>;
   createdAt: number;
   updatedAt: number;
 }
@@ -115,6 +123,7 @@ class PrintablePhotosDatabase extends Dexie {
     };
 
     this.images.hook("creating", (_primaryKey, image, transaction) => {
+      image.crops ??= {};
       image.updatedAt = Date.now();
       touchProject(image.projectId, transaction);
     });

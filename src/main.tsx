@@ -9,39 +9,45 @@ import { Dialog } from "./components/Dialog";
 import { FileInput } from "./components/FileInput";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
-import { Trash2 } from "lucide-static";
+import {
+  ImagePreview,
+  computeInitialCrop,
+  cropFromPercentages,
+  getCropKey,
+  cropToPercentages,
+  type CropRect,
+} from "./components/ImagePreview";
 import {
   action,
   createMemo,
   For,
   Loading,
-  onCleanup,
-  refresh,
   createOptimistic,
-  createProjection,
+  createSignal,
+  Show,
+  createEffect,
   snapshot,
-  mapArray,
 } from "solid-js";
-import { MaxRectsPacker, type Rectangle } from "maxrects-packer";
+import { type ImageShape, type PaperSettings, type ProjectImage } from "./data";
+import type { PackedImageRectangle } from "./layout";
 import {
-  db,
-  type ImageShape,
-  type ImageSettings,
-  type PaperSettings,
-  type Project,
-  type ProjectImage,
-} from "./data";
-import { createPreviewBlob } from "./utils";
-
-const PREVIEW_DPI = 160;
-const MAX_PREVIEW_EDGE_PX = 1600;
+  addImages,
+  bins,
+  imageConfig,
+  images,
+  paper,
+  projectImages,
+  saveImageCrop,
+  setImageConfig,
+  setPaper,
+} from "./state";
 
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
 }
 
 function getPhotoStyle(
-  rect: Rectangle,
+  rect: PackedImageRectangle,
   paper: { width: number; height: number },
 ): JSX.CSSProperties {
   if (!rect.rot) {
@@ -65,51 +71,25 @@ function getPhotoStyle(
   };
 }
 
-function createImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = src;
-  });
+function getCroppedImageStyle(
+  image: ProjectImage,
+  rect: PackedImageRectangle,
+): JSX.CSSProperties {
+  const cropKey = getCropKey(rect);
+  const savedCrop = image.crops?.[cropKey];
+  const crop = savedCrop
+    ? cropFromPercentages(savedCrop, image.width, image.height)
+    : computeInitialCrop(image.width, image.height, rect);
+  const viewBoxWidth = 100 * (image.width / image.height);
+
+  return {
+    position: "absolute",
+    top: `${(-crop.y / crop.height) * 100}%`,
+    left: `${(-crop.x / crop.width) * 100}%`,
+    width: `${(viewBoxWidth / crop.width) * 100}%`,
+    height: `${(100 / crop.height) * 100}%`,
+  };
 }
-
-const project = createProjection((): Promise<Project> => {
-  return db.table("projects").get("DEFAULT");
-}, {} as Project);
-
-const paper = createMemo(() => {
-  return project.settings.paper;
-});
-
-const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
-  const nestedUpdateEntries = Object.entries(newPaper).map(([key, value]) => [
-    `settings.paper.${key}`,
-    value,
-  ]);
-  const promisish = db
-    .table("projects")
-    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
-  yield Promise.resolve(promisish);
-  refresh(project);
-});
-
-const imageConfig = createMemo(() => {
-  return project.settings.image;
-});
-
-const setImageConfig = action(function* (
-  newImageConfig: Partial<ImageSettings>,
-) {
-  const nestedUpdateEntries = Object.entries(newImageConfig).map(
-    ([key, value]) => [`settings.image.${key}`, value],
-  );
-  const promisish = db
-    .table("projects")
-    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
-  yield Promise.resolve(promisish);
-  refresh(project);
-});
 
 const PAPER_PRESETS = {
   Photos: [
@@ -125,133 +105,6 @@ const PAPER_PRESETS = {
 } as const;
 
 const ALL_PAPER_PRESETS = Object.values(PAPER_PRESETS).flat();
-
-interface ImageRef extends ProjectImage {
-  url: string;
-}
-
-const projectImages = createProjection(async (): Promise<ProjectImage[]> => {
-  if (!project.id) {
-    return [];
-  }
-
-  return db.images.where("projectId").equals(project.id).sortBy("order");
-}, []);
-
-const images = mapArray<ProjectImage, ImageRef>(
-  () => projectImages,
-  (image) => {
-    const blob = snapshot(image().previewBlob ?? image().blob);
-    const blobUrl = URL.createObjectURL(blob);
-
-    onCleanup(() => URL.revokeObjectURL(blobUrl));
-
-    return { ...image(), url: blobUrl };
-  },
-  { keyed: (image) => image.id },
-);
-
-const addImages = action(function* (files: FileList) {
-  const nextImages: ProjectImage[] = [];
-  const currentProjectId = snapshot(project.id);
-  const currentImages = snapshot(projectImages);
-  const nextOrder =
-    currentImages.reduce((maxOrder: number, image: ProjectImage) => {
-      return Math.max(maxOrder, image.order);
-    }, -1) + 1;
-  const paperMaxInches =
-    paper().units === "mm"
-      ? Math.max(paper().width, paper().height) / 25.4
-      : Math.max(paper().width, paper().height);
-  const maxPreviewEdgePx = Math.min(
-    MAX_PREVIEW_EDGE_PX,
-    Math.ceil(paperMaxInches * PREVIEW_DPI),
-  );
-
-  for (const file of files) {
-    const url = URL.createObjectURL(snapshot(file));
-    const img = yield createImage(url);
-    URL.revokeObjectURL(url);
-    const previewBlob = yield createPreviewBlob(file, img, maxPreviewEdgePx);
-    const now = Date.now();
-
-    nextImages.push({
-      id: crypto.randomUUID(),
-      projectId: currentProjectId,
-      order: nextOrder + nextImages.length,
-      name: file.name,
-      type: file.type,
-      width: img.width,
-      height: img.height,
-      blob: file,
-      previewBlob,
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
-
-  if (nextImages.length === 0) {
-    return;
-  }
-
-  const promisish = db.transaction("rw", db.projects, db.images, async () => {
-    await db.images.bulkAdd(nextImages);
-  });
-  yield Promise.resolve(promisish);
-  refresh(projectImages);
-  refresh(project);
-});
-
-const deleteImage = action(function* (imageId: string) {
-  const promisish = db.transaction("rw", db.projects, db.images, async () => {
-    await db.images.delete(imageId);
-  });
-  yield Promise.resolve(promisish);
-  refresh(projectImages);
-  refresh(project);
-});
-
-function packImages(imageList: ImageRef[], allowRotation: boolean) {
-  const packer = new MaxRectsPacker(
-    paper().width,
-    paper().height,
-    paper().gap,
-    {
-      border: paper().margin,
-      pot: false,
-      square: false,
-      allowRotation,
-    },
-  );
-
-  for (const image of imageList) {
-    const aspectRatio = image.height / image.width;
-    const height =
-      imageConfig().shape === "square"
-        ? imageConfig().width
-        : imageConfig().width * aspectRatio;
-    packer.add(imageConfig().width, height, image);
-  }
-
-  return packer.bins;
-}
-
-const bins = createProjection(() => {
-  const imageList = images();
-  const unrotatedBins = packImages(imageList, false);
-
-  if (!paper().allowRotation) {
-    return unrotatedBins;
-  }
-
-  const rotatedBins = packImages(imageList, true);
-
-  if (rotatedBins.length < unrotatedBins.length) {
-    return rotatedBins;
-  }
-
-  return unrotatedBins;
-}, []);
 
 const selectedPaperPreset = createMemo(() => {
   const matchingPreset = ALL_PAPER_PRESETS.find((preset) => {
@@ -422,6 +275,7 @@ function Sidebar() {
           yield downloadPdfFromCurrentLayout({
             bins: [...bins],
             paper: paper(),
+            images: [...snapshot(projectImages)],
           });
         })}
       >
@@ -450,12 +304,95 @@ function AsyncImage(props: JSX.ImgHTMLAttributes<HTMLImageElement>) {
 }
 
 function Pages() {
-  let dialogRef: HTMLDialogElement;
+  const [dialogRef, setDialogRef] = createSignal<HTMLDialogElement>();
+  const [selectedCrop, setSelectedCrop] = createSignal<PackedImageRectangle>();
+  const [crop, setCrop] = createSignal<CropRect>();
+  const selectedImage = createMemo(() => {
+    const imageId = selectedCrop()?.data.id;
+
+    if (!imageId) return undefined;
+
+    return projectImages.find((image) => image.id === imageId);
+  });
+
+  function openCropDialog(sc: PackedImageRectangle) {
+    const img = projectImages.find((image) => image.id === sc.data.id);
+
+    if (!img) return;
+
+    const cropKey = getCropKey(sc);
+    const savedCrop = img.crops?.[cropKey];
+    const nextCrop = savedCrop
+      ? cropFromPercentages(savedCrop, img.width, img.height)
+      : computeInitialCrop(img.width, img.height, sc);
+
+    setCrop(nextCrop);
+    setSelectedCrop(sc);
+  }
+
+  createEffect(
+    () => {
+      const sc = selectedCrop();
+      const dialog = dialogRef();
+
+      if (!sc || !dialog) return undefined;
+
+      return dialog;
+    },
+    (dialog) => {
+      if (!dialog || dialog.open) return;
+
+      dialog.showModal();
+    },
+  );
 
   return (
     <>
-      <Dialog ref={(el) => (dialogRef = el)}>
-        <p class="text-sm text-muted-foreground">test</p>
+      <Dialog
+        ref={setDialogRef}
+        onClose={() => {
+          setSelectedCrop();
+          setCrop();
+        }}
+      >
+        <Show when={selectedCrop()}>
+          {(sc) => (
+            <Show when={selectedImage()}>
+              {(image) => (
+                <Show when={crop()}>
+                  {(c) => (
+                    <>
+                      <ImagePreview
+                        image={image()}
+                        currentCrop={sc()}
+                        crop={c()}
+                        onCropChange={setCrop}
+                      />
+                      <button
+                        type="button"
+                        class="border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+                        onClick={async () => {
+                          await saveImageCrop(
+                            image().id,
+                            getCropKey(sc()),
+                            cropToPercentages(
+                              c(),
+                              image().width,
+                              image().height,
+                            ),
+                          );
+                          dialogRef()?.close();
+                        }}
+                      >
+                        Done
+                      </button>
+                    </>
+                  )}
+                </Show>
+              )}
+            </Show>
+          )}
+        </Show>
       </Dialog>
       <div class="flex flex-col gap-5">
         <For each={bins}>
@@ -471,16 +408,25 @@ function Pages() {
                 {(rect) => (
                   <button
                     type="button"
-                    class="group/photo block overflow-hidden border-0 bg-transparent p-0 outline-0 transition-[outline-color,outline-width,opacity] hover:outline-[4px] hover:outline-ring/50 hover:opacity-95 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
+                    class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 transition-[outline-color,outline-width,opacity] hover:outline-[4px] hover:outline-ring/50 hover:opacity-95 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
                     style={getPhotoStyle(rect(), paper())}
                     title="Open image dialog"
-                    onClick={() => dialogRef.showModal()}
+                    onClick={() => openCropDialog(rect())}
                   >
-                    <AsyncImage
-                      class="block size-full object-cover visible [dynamic-range-limit:standard] select-none"
-                      src={rect().data.url}
-                      draggable="false"
-                    />
+                    <Show
+                      when={images().find(
+                        (image) => image.id === rect().data.id,
+                      )}
+                    >
+                      {(image) => (
+                        <AsyncImage
+                          class="block max-w-none visible [dynamic-range-limit:standard] select-none"
+                          style={getCroppedImageStyle(image(), rect())}
+                          src={image().url}
+                          draggable="false"
+                        />
+                      )}
+                    </Show>
                   </button>
                 )}
               </For>
