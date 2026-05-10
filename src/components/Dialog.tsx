@@ -6,6 +6,7 @@ export interface DialogProps {
   children: JSX.Element;
   class?: string;
   onClose?: () => void;
+  onKeyDown?: JSX.EventHandlerUnion<HTMLDialogElement, KeyboardEvent>;
 }
 
 export function Dialog(props: DialogProps) {
@@ -30,6 +31,7 @@ export function Dialog(props: DialogProps) {
           isBackdropPointerDown = false;
         }}
         onClose={props.onClose}
+        onKeyDown={props.onKeyDown}
       >
         {props.children}
       </dialog>

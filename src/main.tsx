@@ -11,6 +11,8 @@ import { FileInput } from "./components/FileInput";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
 import { ImagePreview } from "./components/ImagePreview";
+import { Icon } from "./components/Icon";
+import { Trash2 } from "lucide-static";
 import {
   computeInitialCrop,
   cropFromPercentages,
@@ -40,6 +42,7 @@ import {
   images,
   paper,
   projectImages,
+  deleteImage,
   saveImageCrop,
   setImageConfig,
   setPaper,
@@ -328,6 +331,17 @@ function Pages() {
     dialogRef()?.close();
   }
 
+  async function deleteSelectedImage() {
+    const image = selectedImage();
+
+    if (!image) return;
+    if (!window.confirm("Delete this image?")) return;
+
+    await deleteImage(image.id);
+    await resolve(() => !projectImages.find((projectImage) => projectImage.id === image.id));
+    dialogRef()?.close();
+  }
+
   createEffect(
     () => {
       const sc = selectedCrop();
@@ -349,6 +363,12 @@ function Pages() {
       <Dialog
         ref={setDialogRef}
         class="h-[calc(100dvh-2.5rem)] w-[calc(100vw-2.5rem)] max-w-fit grid-rows-[minmax(0,1fr)_auto_auto] gap-0"
+        onKeyDown={(event) => {
+          if (event.key !== "Backspace") return;
+
+          event.preventDefault();
+          void deleteSelectedImage();
+        }}
         onClose={() => {
           setSelectedCrop();
           setCrop();
@@ -374,6 +394,15 @@ function Pages() {
                         <div class="border-t -mt-1" />
                       </div>
                       <div class="flex items-center justify-end gap-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          class="mr-auto gap-2"
+                          onClick={deleteSelectedImage}
+                        >
+                          <Icon icon={Trash2} />
+                          Delete
+                        </Button>
                         <Button
                           type="button"
                           variant="secondary"
