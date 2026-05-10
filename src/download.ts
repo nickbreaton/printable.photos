@@ -1,3 +1,4 @@
+import { zipSync } from "fflate";
 import picaFactory from "pica";
 import { PDFDocument } from "pdf-lib";
 import { computeInitialCrop, cropFromPercentages, cropToSourcePixels, getCropKey } from "./crop";
@@ -167,19 +168,6 @@ function downloadBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
-function openBlobInNewTab(blob: Blob, tab: Window | null) {
-  const url = URL.createObjectURL(blob);
-
-  if (tab) {
-    tab.opener = null;
-    tab.location.href = url;
-  } else {
-    window.open(url, "_blank", "noopener");
-  }
-
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-}
-
 async function renderPageCanvas(
   bin: PackedImageBin,
   imagesById: Map<string, DownloadImage>,
@@ -224,7 +212,6 @@ export async function downloadPhotosFromCurrentLayout(
   options: DownloadPhotosFromCurrentLayoutOptions,
 ) {
   const imagesById = new Map(options.images.map((image) => [image.id, image]));
-  const tabs = options.bins.map(() => window.open("", "_blank"));
   const blobs = await Promise.all(
     options.bins.map(async (bin) => {
       const canvas = await renderPageCanvas(bin, imagesById, options.paper);
@@ -244,10 +231,20 @@ export async function downloadPhotosFromCurrentLayout(
       });
     }),
   );
+  const files = Object.fromEntries(
+    await Promise.all(
+      blobs.map(async (blob, index) => {
+        const pageNumber = String(index + 1).padStart(3, "0");
+        const bytes = new Uint8Array(await blob.arrayBuffer());
 
-  for (const [index, blob] of blobs.entries()) {
-    openBlobInNewTab(blob, tabs[index] ?? null);
-  }
+        return [`page-${pageNumber}.jpg`, bytes];
+      }),
+    ),
+  );
+  const zipped = zipSync(files, { level: 0 });
+  const output = new Blob([zipped], { type: "application/zip" });
+
+  downloadBlob(output, "printable-photos.zip");
 }
 
 export async function downloadPdfFromCurrentLayout(options: DownloadPdfFromCurrentLayoutOptions) {
