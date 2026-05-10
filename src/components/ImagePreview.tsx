@@ -468,7 +468,7 @@ export function ImagePreview(props: {
     <svg
       ref={setSvgRef}
       class={cn(
-        "block h-full w-auto max-h-full max-w-full min-w-0 dynamic-range-standard overflow-visible",
+        "block h-full w-auto max-h-full max-w-full min-w-0 [dynamic-range-limit:standard] overflow-visible",
         props.class,
       )}
       viewBox={`0 0 ${viewBoxWidth()} ${viewBoxHeight}`}

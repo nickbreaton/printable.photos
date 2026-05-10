@@ -167,10 +167,6 @@
   dynamic-range-limit: standard;
 }
 
-.dynamic-range-standard {
-  dynamic-range-limit: standard;
-}
-
 dialog:not([open]) {
   display: none;
 }
