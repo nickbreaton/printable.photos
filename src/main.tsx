@@ -384,7 +384,7 @@ function Pages() {
                           onCropDone={saveSelectedCrop}
                         />
                       </div>
-                      <div class="py-6">
+                      <div class="py-4">
                         <div class="border-t -mt-1" />
                       </div>
                       <div class="flex items-center justify-end gap-3">
@@ -421,7 +421,7 @@ function Pages() {
                 {(rect) => (
                   <button
                     type="button"
-                    class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:opacity-80 dark:hover:opacity-70 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
+                    class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:opacity-90 dark:hover:opacity-85 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
                     style={getPhotoStyle(rect(), paper())}
                     title="Open image dialog"
                     onClick={() => openCropDialog(rect())}
