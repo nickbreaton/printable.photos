@@ -97,7 +97,7 @@ class PrintablePhotosDatabase extends Dexie {
     });
 
     this.on("populate", (transaction) => {
-      transaction.table("projects").add(createDefaultProject());
+      void transaction.table("projects").add(createDefaultProject());
     });
 
     this.projects.hook("creating", (_primaryKey, project) => {
@@ -109,11 +109,7 @@ class PrintablePhotosDatabase extends Dexie {
     });
 
     this.projects.hook("deleting", (primaryKey, _project, transaction) => {
-      return transaction
-        .table("images")
-        .where("projectId")
-        .equals(primaryKey)
-        .delete();
+      return transaction.table("images").where("projectId").equals(primaryKey).delete();
     });
 
     const touchProject = (projectId: string, transaction: Transaction) => {
@@ -125,11 +121,11 @@ class PrintablePhotosDatabase extends Dexie {
     this.images.hook("creating", (_primaryKey, image, transaction) => {
       image.crops ??= {};
       image.updatedAt = Date.now();
-      touchProject(image.projectId, transaction);
+      void touchProject(image.projectId, transaction);
     });
 
     this.images.hook("updating", (_mods, _primaryKey, image, transaction) => {
-      touchProject(image.projectId, transaction);
+      void touchProject(image.projectId, transaction);
       return { updatedAt: Date.now() };
     });
 

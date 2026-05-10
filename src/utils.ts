@@ -9,11 +9,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export async function createPreviewBlob(
-  file: File,
-  sourceBitmap: ImageBitmap,
-  maxEdgePx: number,
-) {
+export async function createPreviewBlob(file: File, sourceBitmap: ImageBitmap, maxEdgePx: number) {
   const longestEdge = Math.max(sourceBitmap.width, sourceBitmap.height);
   const targetLongestEdge = Math.min(longestEdge, maxEdgePx);
 

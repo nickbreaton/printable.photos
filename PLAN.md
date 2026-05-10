@@ -64,6 +64,7 @@ Result: print-appropriate quality while avoiding massive PDFs from oversized ori
 6. Embed resized bytes with `pdf-lib` and draw at final physical bounds on the page.
 
 High-level `pica` API we will use:
+
 - `picaFactory()` to create the resizer instance.
 - `pica.resize(srcCanvas, destCanvas, options)` for high-quality downsampling.
 - `pica.toBlob(destCanvas, mimeType, quality?)` to produce final encoded bytes for `pdf-lib`.

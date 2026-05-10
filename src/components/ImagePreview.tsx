@@ -11,11 +11,7 @@ import type { Rectangle } from "maxrects-packer";
 
 import type { ProjectImage } from "../data";
 import { cn } from "../utils";
-import {
-  getCropAspectRatio,
-  getImageViewBoxWidth,
-  type CropRect,
-} from "../crop";
+import { getCropAspectRatio, getImageViewBoxWidth, type CropRect } from "../crop";
 
 const MIN_CROP_SCREEN_PX = 100;
 
@@ -265,9 +261,7 @@ export function ImagePreview(props: {
   });
 
   const previewUrl = createMemo(() => {
-    const url = URL.createObjectURL(
-      snapshot(props.image.previewBlob ?? props.image.blob),
-    );
+    const url = URL.createObjectURL(snapshot(props.image.previewBlob ?? props.image.blob));
     onCleanup(() => URL.revokeObjectURL(url));
     return new Promise<string>((resolve, reject) => {
       const image = new Image();
@@ -505,12 +499,7 @@ export function ImagePreview(props: {
             preserveAspectRatio="none"
           />
         ) : (
-          <foreignObject
-            x={0}
-            y={0}
-            width={viewBoxWidth()}
-            height={viewBoxHeight}
-          >
+          <foreignObject x={0} y={0} width={viewBoxWidth()} height={viewBoxHeight}>
             <PreviewCanvas source={previewImage()} />
           </foreignObject>
         )}

@@ -1,6 +1,6 @@
 ## Design System Source
 
-This project is built with Tailwind and ShadCN used the following ShadCN preset to build components locally. 
+This project is built with Tailwind and ShadCN used the following ShadCN preset to build components locally.
 
 https://ui.shadcn.com/create?preset=bbVJyN6
 

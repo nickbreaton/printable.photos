@@ -37,9 +37,7 @@ export const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
     `settings.paper.${key}`,
     value,
   ]);
-  const promisish = db
-    .table("projects")
-    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+  const promisish = db.table("projects").update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
   yield Promise.resolve(promisish);
   refresh(project);
 });
@@ -48,15 +46,12 @@ export const imageConfig = createMemo(() => {
   return project.settings.image;
 });
 
-export const setImageConfig = action(function* (
-  newImageConfig: Partial<ImageSettings>,
-) {
-  const nestedUpdateEntries = Object.entries(newImageConfig).map(
-    ([key, value]) => [`settings.image.${key}`, value],
-  );
-  const promisish = db
-    .table("projects")
-    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+export const setImageConfig = action(function* (newImageConfig: Partial<ImageSettings>) {
+  const nestedUpdateEntries = Object.entries(newImageConfig).map(([key, value]) => [
+    `settings.image.${key}`,
+    value,
+  ]);
+  const promisish = db.table("projects").update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
   yield Promise.resolve(promisish);
   refresh(project);
 });
@@ -65,9 +60,7 @@ interface ImageRef extends ProjectImage {
   url: string;
 }
 
-export const projectImages = createProjection(async (): Promise<
-  ProjectImage[]
-> => {
+export const projectImages = createProjection(async (): Promise<ProjectImage[]> => {
   if (!project.id) {
     return [];
   }
@@ -100,19 +93,12 @@ export const addImages = action(function* (files: FileList) {
     paper().units === "mm"
       ? Math.max(paper().width, paper().height) / 25.4
       : Math.max(paper().width, paper().height);
-  const maxPreviewEdgePx = Math.min(
-    MAX_PREVIEW_EDGE_PX,
-    Math.ceil(paperMaxInches * PREVIEW_DPI),
-  );
+  const maxPreviewEdgePx = Math.min(MAX_PREVIEW_EDGE_PX, Math.ceil(paperMaxInches * PREVIEW_DPI));
 
   for (const file of files) {
     const bitmap = yield createImageBitmap(snapshot(file));
     try {
-      const previewBlob = yield createPreviewBlob(
-        file,
-        bitmap,
-        maxPreviewEdgePx,
-      );
+      const previewBlob = yield createPreviewBlob(file, bitmap, maxPreviewEdgePx);
       const now = Date.now();
 
       nextImages.push({
@@ -178,30 +164,20 @@ export const saveImageCrop = action(function* (
   refresh(projectImages);
 });
 
-function packImages(
-  imageList: ImageRef[],
-  allowRotation: boolean,
-): PackedImageBin[] {
-  const packer = new MaxRectsPacker(
-    paper().width,
-    paper().height,
-    paper().gap,
-    {
-      border: paper().margin,
-      pot: false,
-      square: false,
-      allowRotation,
-    },
-  );
+function packImages(imageList: ImageRef[], allowRotation: boolean): PackedImageBin[] {
+  const packer = new MaxRectsPacker(paper().width, paper().height, paper().gap, {
+    border: paper().margin,
+    pot: false,
+    square: false,
+    allowRotation,
+  });
 
   for (const image of imageList) {
     const aspectRatio = image.height / image.width;
     // The selected Image shape controls the packed rect's aspect ratio, which
     // is later used as the crop persistence key.
     const height =
-      imageConfig().shape === "square"
-        ? imageConfig().width
-        : imageConfig().width * aspectRatio;
+      imageConfig().shape === "square" ? imageConfig().width : imageConfig().width * aspectRatio;
     packer.add(imageConfig().width, height, { id: image.id });
   }
 

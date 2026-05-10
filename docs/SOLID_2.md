@@ -266,9 +266,7 @@ Before:
 After:
 
 ```tsx
-<button ref={[setButton, tooltip(() => props.label)]}>
-  {props.children}
-</button>
+<button ref={[setButton, tooltip(() => props.label)]}>{props.children}</button>
 ```
 
 Important details:
@@ -292,7 +290,7 @@ Example:
 function titleRef(source: () => string) {
   let el: HTMLElement | undefined;
 
-  createEffect(source, value => {
+  createEffect(source, (value) => {
     if (el) el.title = value;
   });
 
@@ -306,9 +304,7 @@ function titleRef(source: () => string) {
 Used as:
 
 ```tsx
-<button ref={titleRef(() => props.title)}>
-  {props.children}
-</button>
+<button ref={titleRef(() => props.title)}>{props.children}</button>
 ```
 
 Practical rules for this repo:
@@ -322,11 +318,7 @@ Practical rules for this repo:
 function Button(props) {
   let local!: HTMLButtonElement;
 
-  return (
-    <button ref={[el => (local = el), props.ref]}>
-      {props.children}
-    </button>
-  );
+  return <button ref={[(el) => (local = el), props.ref]}>{props.children}</button>;
 }
 ```
 

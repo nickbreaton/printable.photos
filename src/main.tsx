@@ -74,10 +74,7 @@ function getPhotoStyle(
   };
 }
 
-function getCroppedImageStyle(
-  image: ProjectImage,
-  rect: PackedImageRectangle,
-): JSX.CSSProperties {
+function getCroppedImageStyle(image: ProjectImage, rect: PackedImageRectangle): JSX.CSSProperties {
   const cropKey = getCropKey(rect);
   const savedCrop = image.crops?.[cropKey];
   const crop = savedCrop
@@ -117,8 +114,7 @@ const selectedPaperPreset = createMemo(() => {
   return matchingPreset?.value ?? "Custom";
 });
 
-const cardSurfaceClass =
-  "bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10";
+const cardSurfaceClass = "bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10";
 
 function Sidebar() {
   const [saving, setSaving] = createOptimistic(false);
@@ -142,7 +138,7 @@ function Sidebar() {
                 return;
               }
 
-              setPaper({
+              void setPaper({
                 width: selectedPreset.width,
                 height: selectedPreset.height,
               });
@@ -153,9 +149,7 @@ function Sidebar() {
               {(group) => (
                 <optgroup label={group()[0]}>
                   <For each={group()[1]}>
-                    {(preset) => (
-                      <option value={preset().value}>{preset().label}</option>
-                    )}
+                    {(preset) => <option value={preset().value}>{preset().label}</option>}
                   </For>
                 </optgroup>
               )}
@@ -202,9 +196,7 @@ function Sidebar() {
           Units
           <Select
             value={paper().units}
-            onChange={(e) =>
-              setPaper({ units: e.target.value as PaperSettings["units"] })
-            }
+            onChange={(e) => setPaper({ units: e.target.value as PaperSettings["units"] })}
             disabled={
               true /* keep as inches until doing something smart for keeping same size but different units on selection */
             }
@@ -226,9 +218,7 @@ function Sidebar() {
           Image shape
           <Select
             value={imageConfig().shape}
-            onChange={(e) =>
-              setImageConfig({ shape: e.target.value as ImageShape })
-            }
+            onChange={(e) => setImageConfig({ shape: e.target.value as ImageShape })}
           >
             <option value="original">Original</option>
             <option value="square">Square</option>
@@ -333,11 +323,7 @@ function Pages() {
 
     if (!sc || !c || !image) return;
 
-    await saveImageCrop(
-      image.id,
-      getCropKey(sc),
-      cropToPercentages(c, image.width, image.height),
-    );
+    await saveImageCrop(image.id, getCropKey(sc), cropToPercentages(c, image.width, image.height));
     await resolve(() => projectImages.find((image) => image.id));
     dialogRef()?.close();
   }
@@ -426,11 +412,7 @@ function Pages() {
                     title="Open image dialog"
                     onClick={() => openCropDialog(rect())}
                   >
-                    <Show
-                      when={images().find(
-                        (image) => image.id === rect().data.id,
-                      )}
-                    >
+                    <Show when={images().find((image) => image.id === rect().data.id)}>
                       {(image) => (
                         <AsyncImage
                           class="block max-w-none visible [dynamic-range-limit:standard] select-none"
