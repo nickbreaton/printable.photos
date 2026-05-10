@@ -4,7 +4,8 @@ import type { JSX } from "@solidjs/web";
 import "./style.css";
 import { Button } from "./components/Button";
 import { Checkbox } from "./components/Checkbox";
-import { downloadPdfFromCurrentLayout, downloadPhotosFromCurrentLayout } from "./download";
+import { downloadPdfFromCurrentLayout } from "./download/pdf";
+import { downloadPhotosFromCurrentLayout } from "./download/photos";
 import { FieldLabel } from "./components/FieldLabel";
 import { Dialog } from "./components/Dialog";
 import { FileInput } from "./components/FileInput";
@@ -259,7 +260,7 @@ function Sidebar() {
           })}
         />
       </fieldset>
-      <div class="grid grid-cols-2 gap-2">
+      <div class="flex flex-col gap-2">
         <Button
           type="button"
           class="min-w-0"
