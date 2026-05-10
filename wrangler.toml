@@ -1,0 +1,11 @@
+name = "printable-photos"
+compatibility_date = "2026-05-10"
+workers_dev = false
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+
+[[routes]]
+pattern = "printable.photos"
+custom_domain = true
