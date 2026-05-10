@@ -10,6 +10,7 @@ import {
 import type { Rectangle } from "maxrects-packer";
 
 import type { ProjectImage } from "../data";
+import { cn } from "../utils";
 import {
   getCropAspectRatio,
   getImageViewBoxWidth,
@@ -248,6 +249,7 @@ export function ImagePreview(props: {
   image: ProjectImage & { url?: string };
   currentCrop: Rectangle;
   crop: CropRect;
+  class?: string;
   onCropChange: (crop: CropRect) => void;
   onCropDone?: () => void;
 }) {
@@ -466,10 +468,12 @@ export function ImagePreview(props: {
   return (
     <svg
       ref={setSvgRef}
-      class="block dynamic-range-standard max-w-2xl max-h-[70vh] min-w-full overflow-visible"
+      class={cn(
+        "block h-full w-auto max-h-full max-w-full min-w-0 dynamic-range-standard overflow-visible",
+        props.class,
+      )}
       viewBox={`0 0 ${viewBoxWidth()} ${viewBoxHeight}`}
       style={{
-        [imageAspectRatio() > 1 ? "width" : "height"]: "10000px",
         "aspect-ratio": props.image.width / props.image.height,
       }}
     >

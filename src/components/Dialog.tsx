@@ -16,7 +16,7 @@ export function Dialog(props: DialogProps) {
       <dialog
         ref={props.ref}
         class={cn(
-          "mx-auto mt-[10vh] grid gap-4 border bg-background p-6 shadow-lg backdrop:bg-black/80 sm:rounded-lg",
+          "m-auto grid max-h-[calc(100dvh-2.5rem)] gap-4 border bg-background p-6 shadow-lg backdrop:bg-black/80 sm:rounded-lg",
           props.class,
         )}
         onPointerDown={(event) => {
