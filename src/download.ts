@@ -157,9 +157,7 @@ async function embedCanvas(
   );
   const bytes = await blob.arrayBuffer();
 
-  return mimeType === "image/png"
-    ? pdf.embedPng(bytes)
-    : pdf.embedJpg(bytes);
+  return mimeType === "image/png" ? pdf.embedPng(bytes) : pdf.embedJpg(bytes);
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -232,7 +230,7 @@ export async function downloadPdfFromCurrentLayout(
   }
 
   const bytes = await pdf.save();
-  const output = new Blob([bytes.slice().buffer as ArrayBuffer], {
+  const output = new Blob([bytes.buffer as ArrayBuffer], {
     type: "application/pdf",
   });
 
