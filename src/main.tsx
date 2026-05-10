@@ -361,7 +361,7 @@ function Pages() {
               {(image) => (
                 <Show when={crop()}>
                   {(c) => (
-                    <Loading fallback={"test"}>
+                    <>
                       <ImagePreview
                         image={image()}
                         currentCrop={sc()}
@@ -386,7 +386,7 @@ function Pages() {
                       >
                         Done
                       </button>
-                    </Loading>
+                    </>
                   )}
                 </Show>
               )}

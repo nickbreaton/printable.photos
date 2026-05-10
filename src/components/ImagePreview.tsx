@@ -328,7 +328,9 @@ export function ImagePreview(props: {
   });
 
   const previewUrl = createMemo(() => {
-    const url = URL.createObjectURL(snapshot(props.image.blob));
+    const url = URL.createObjectURL(
+      snapshot(props.image.previewBlob ?? props.image.blob),
+    );
     onCleanup(() => URL.revokeObjectURL(url));
     return new Promise<string>((resolve, reject) => {
       const image = new Image();
