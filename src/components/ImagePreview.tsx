@@ -4,6 +4,7 @@ import {
   createSignal,
   createUniqueId,
   For,
+  Loading,
   onCleanup,
   snapshot,
 } from "solid-js";
@@ -143,6 +144,39 @@ interface DragState {
   type: DragType;
   startPointer: { x: number; y: number };
   startCrop: CropRect;
+}
+
+function PreviewCanvas(props: { source: ImageBitmap }) {
+  let canvas: HTMLCanvasElement | undefined;
+
+  createEffect(
+    () => props.source,
+    (image) => {
+      if (!canvas) return;
+
+      const width = image.width;
+      const height = image.height;
+      const context = canvas.getContext("2d");
+
+      if (!context) return;
+
+      canvas.width = width;
+      canvas.height = height;
+      context.clearRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+    },
+  );
+
+  return (
+    <canvas
+      ref={canvas}
+      style={{
+        display: "block",
+        width: "100%",
+        height: "100%",
+      }}
+    />
+  );
 }
 
 function computeResize(
@@ -443,29 +477,6 @@ export function ImagePreview(props: {
     window.addEventListener("pointerup", handleWindowPointerUp);
   }
 
-  function renderImage(source: () => ImageBitmap) {
-    let canvas: HTMLCanvasElement | undefined;
-
-    createEffect(source, (image) => {
-      if (!canvas) return;
-
-      const width = image.width;
-      const height = image.height;
-      const context = canvas.getContext("2d");
-
-      if (!context) return;
-
-      canvas.width = width;
-      canvas.height = height;
-      context.clearRect(0, 0, width, height);
-      context.drawImage(image, 0, 0, width, height);
-    });
-
-    return (el: HTMLCanvasElement) => {
-      canvas = el;
-    };
-  }
-
   function handleWindowPointerMove(e: PointerEvent) {
     const state = dragState();
     const svg = svgRef();
@@ -543,14 +554,7 @@ export function ImagePreview(props: {
           width={viewBoxWidth()}
           height={viewBoxHeight}
         >
-          <canvas
-            ref={renderImage(previewImage)}
-            style={{
-              display: "block",
-              width: "100%",
-              height: "100%",
-            }}
-          />
+          <PreviewCanvas source={previewImage()} />
         </foreignObject>
       </g>
       <rect
