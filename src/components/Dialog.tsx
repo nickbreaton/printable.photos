@@ -6,10 +6,24 @@ export interface DialogProps {
   children: JSX.Element;
   class?: string;
   onClose?: () => void;
+  onKeyDown?: JSX.EventHandlerUnion<HTMLDialogElement, KeyboardEvent>;
 }
 
 export function Dialog(props: DialogProps) {
   let isBackdropPointerDown = false;
+
+  function isBackdropPointerEvent(
+    event: MouseEvent & { currentTarget: HTMLDialogElement },
+  ) {
+    const rect = event.currentTarget.getBoundingClientRect();
+
+    return (
+      event.clientX < rect.left ||
+      event.clientX > rect.right ||
+      event.clientY < rect.top ||
+      event.clientY > rect.bottom
+    );
+  }
 
   return (
     <Loading>
@@ -20,16 +34,21 @@ export function Dialog(props: DialogProps) {
           props.class,
         )}
         onPointerDown={(event) => {
-          isBackdropPointerDown = event.target === event.currentTarget;
+          isBackdropPointerDown = isBackdropPointerEvent(event);
         }}
         onClick={(event) => {
-          if (isBackdropPointerDown && event.target === event.currentTarget) {
+          if (
+            isBackdropPointerDown &&
+            event.target === event.currentTarget &&
+            isBackdropPointerEvent(event)
+          ) {
             event.currentTarget.close();
           }
 
           isBackdropPointerDown = false;
         }}
         onClose={props.onClose}
+        onKeyDown={props.onKeyDown}
       >
         {props.children}
       </dialog>

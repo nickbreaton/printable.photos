@@ -73,14 +73,14 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
 };
 
 export function createDefaultProject(): Project {
-  const now = Date.now();
+  const timestamp = Date.now();
 
   return {
     id: "DEFAULT",
     name: "Untitled project",
     settings: structuredClone(DEFAULT_PROJECT_SETTINGS),
-    createdAt: now,
-    updatedAt: now,
+    createdAt: timestamp,
+    updatedAt: timestamp,
   };
 }
 
@@ -135,4 +135,4 @@ class PrintablePhotosDatabase extends Dexie {
   }
 }
 
-export const db = new PrintablePhotosDatabase();
+export const database = new PrintablePhotosDatabase();

@@ -1,12 +1,4 @@
-import {
-  createMemo,
-  createRenderEffect,
-  createSignal,
-  createUniqueId,
-  For,
-  onCleanup,
-  snapshot,
-} from "solid-js";
+import { createMemo, createRenderEffect, createSignal, For, onCleanup, snapshot } from "solid-js";
 import type { Rectangle } from "maxrects-packer";
 
 import type { ProjectImage } from "../data";
@@ -15,14 +7,29 @@ import { getCropAspectRatio, getImageViewBoxWidth, type CropRect } from "../crop
 
 const MIN_CROP_SCREEN_PX = 100;
 
+// Visual config. Lengths are in viewBox units (viewBoxHeight = 100).
+// Strokes are in CSS pixels so they remain crisp regardless of image size.
 const cropFrameConfig = {
-  outerOpacity: 0.4,
-  grabberLength: 4,
+  cornerGrabberLength: 4,
   sideGrabberLength: 6,
-  grabberStrokeWidth: 0.75,
-  frameStrokeWidth: 1,
-  handleHitStrokeWidth: 8,
+  grabberStrokePx: 3,
+  framePx: 1,
+  hitStrokePx: 16,
 };
+
+// Distance (px) from the crop edge to the OUTER edge of the grabber stroke.
+// Equal to outline thickness + grabber stroke thickness so the stroke sits in
+// the gutter just outside the outline, not on top of it.
+const GRABBER_OUTER_OFFSET_PX = cropFrameConfig.framePx + cropFrameConfig.grabberStrokePx;
+
+// The area outside the crop is dimmed by overlaying the theme background
+// (white in light mode, near-black in dark mode) at partial opacity. This
+// makes it look as though the page background is showing through the image,
+// instead of arbitrarily darkening with black.
+//   outside crop: bg overlay at 0.6  -> ~40% image, ~60% bg
+//   inside crop:  bg overlay at 0.05 -> ~95% image, ~5% bg
+const OUTER_DIM_OPACITY = 0.6;
+const INNER_DIM_OPACITY = 0.05;
 
 const CROP_FRAME_HANDLES = [
   "top",
@@ -35,44 +42,21 @@ const CROP_FRAME_HANDLES = [
   "bottom-left",
 ] as const;
 
-function isSafariBrowser() {
-  return (
-    navigator.vendor.includes("Apple") &&
-    /safari/i.test(navigator.userAgent) &&
-    !/chrome|chromium|crios|fxios|edgios|android/i.test(navigator.userAgent)
-  );
-}
-
 type CropFrameHandle = (typeof CROP_FRAME_HANDLES)[number];
 
 function getCropFrameHandleCursor(handle: CropFrameHandle) {
-  if (handle === "top" || handle === "bottom") {
-    return "cursor-ns-resize";
-  }
-
-  if (handle === "left" || handle === "right") {
-    return "cursor-ew-resize";
-  }
-
-  if (handle === "top-left" || handle === "bottom-right") {
-    return "cursor-nwse-resize";
-  }
-
+  if (handle === "top" || handle === "bottom") return "cursor-ns-resize";
+  if (handle === "left" || handle === "right") return "cursor-ew-resize";
+  if (handle === "top-left" || handle === "bottom-right") return "cursor-nwse-resize";
   return "cursor-nesw-resize";
 }
 
-function clientToSVG(
-  svg: SVGSVGElement,
-  clientX: number,
-  clientY: number,
-): { x: number; y: number } | null {
-  const point = svg.createSVGPoint();
-  point.x = clientX;
-  point.y = clientY;
-  const ctm = svg.getScreenCTM();
-  if (!ctm) return null;
-  const svgPoint = point.matrixTransform(ctm.inverse());
-  return { x: svgPoint.x, y: svgPoint.y };
+function getDragCursor(type: DragType) {
+  if (type === "move") return "move";
+  if (type === "top" || type === "bottom") return "ns-resize";
+  if (type === "left" || type === "right") return "ew-resize";
+  if (type === "top-left" || type === "bottom-right") return "nwse-resize";
+  return "nesw-resize";
 }
 
 type DragType = "move" | CropFrameHandle;
@@ -83,24 +67,22 @@ interface DragState {
   startCrop: CropRect;
 }
 
-function PreviewCanvas(props: { source: ImageBitmap }) {
+function PreviewCanvas(props: { source: ImageBitmap; class?: string }) {
   let canvas: HTMLCanvasElement | undefined;
 
+  // Render the bitmap at its native resolution. The canvas element itself is
+  // sized via CSS (100% / 100%) and scaled by the browser like an <img>, so we
+  // never need a ResizeObserver here.
   createRenderEffect(
     () => props.source,
     (image) => {
       if (!canvas) return;
-
-      const width = image.width;
-      const height = image.height;
       const context = canvas.getContext("2d");
-
       if (!context) return;
-
-      canvas.width = width;
-      canvas.height = height;
-      context.clearRect(0, 0, width, height);
-      context.drawImage(image, 0, 0, width, height);
+      canvas.width = image.width;
+      canvas.height = image.height;
+      context.clearRect(0, 0, image.width, image.height);
+      context.drawImage(image, 0, 0);
     },
   );
 
@@ -109,6 +91,7 @@ function PreviewCanvas(props: { source: ImageBitmap }) {
       ref={(element) => {
         canvas = element;
       }}
+      class={props.class}
       style={{
         display: "block",
         width: "100%",
@@ -118,87 +101,120 @@ function PreviewCanvas(props: { source: ImageBitmap }) {
   );
 }
 
+function clamp(value: number, min: number, max: number): number {
+  if (max < min) return max;
+  return Math.max(min, Math.min(value, max));
+}
+
 function computeResize(
   handle: CropFrameHandle,
-  dx: number,
-  dy: number,
-  startCrop: CropRect,
+  deltaX: number,
+  deltaY: number,
+  startingCrop: CropRect,
+  viewBoxWidth: number,
+  viewBoxHeight: number,
   aspectRatio: number,
-  minDim: number,
+  minDimension: number,
 ): CropRect {
-  const sc = startCrop;
+  const centerX = startingCrop.x + startingCrop.width / 2;
+  const centerY = startingCrop.y + startingCrop.height / 2;
+
+  // These are max widths, not raw distances. Vertical distances are converted
+  // through the crop aspect ratio so all handle math clamps a single value.
+  const leftSpace = startingCrop.x + startingCrop.width;
+  const rightSpace = viewBoxWidth - startingCrop.x;
+  const topSpace = (startingCrop.y + startingCrop.height) * aspectRatio;
+  const bottomSpace = (viewBoxHeight - startingCrop.y) * aspectRatio;
+  const centeredXSpace = 2 * Math.min(centerX, viewBoxWidth - centerX);
+  const centeredYSpace = 2 * Math.min(centerY, viewBoxHeight - centerY) * aspectRatio;
+  const centeredMaxWidth = Math.min(centeredXSpace, centeredYSpace);
 
   switch (handle) {
     case "bottom-right": {
-      const newWidth = Math.max(minDim, sc.width + dx);
+      const maxWidth = Math.min(rightSpace, bottomSpace);
+      const newWidth = clamp(startingCrop.width + deltaX, minDimension, maxWidth);
       const newHeight = newWidth / aspectRatio;
-      return { x: sc.x, y: sc.y, width: newWidth, height: newHeight };
+      return { x: startingCrop.x, y: startingCrop.y, width: newWidth, height: newHeight };
     }
     case "top-left": {
-      const newWidth = Math.max(minDim, sc.width - dx);
+      const maxWidth = Math.min(leftSpace, topSpace);
+      const newWidth = clamp(startingCrop.width - deltaX, minDimension, maxWidth);
       const newHeight = newWidth / aspectRatio;
       return {
-        x: sc.x + sc.width - newWidth,
-        y: sc.y + sc.height - newHeight,
+        x: startingCrop.x + startingCrop.width - newWidth,
+        y: startingCrop.y + startingCrop.height - newHeight,
         width: newWidth,
         height: newHeight,
       };
     }
     case "top-right": {
-      const newWidth = Math.max(minDim, sc.width + dx);
+      const maxWidth = Math.min(rightSpace, topSpace);
+      const newWidth = clamp(startingCrop.width + deltaX, minDimension, maxWidth);
       const newHeight = newWidth / aspectRatio;
       return {
-        x: sc.x,
-        y: sc.y + sc.height - newHeight,
+        x: startingCrop.x,
+        y: startingCrop.y + startingCrop.height - newHeight,
         width: newWidth,
         height: newHeight,
       };
     }
     case "bottom-left": {
-      const newWidth = Math.max(minDim, sc.width - dx);
+      const maxWidth = Math.min(leftSpace, bottomSpace);
+      const newWidth = clamp(startingCrop.width - deltaX, minDimension, maxWidth);
       const newHeight = newWidth / aspectRatio;
       return {
-        x: sc.x + sc.width - newWidth,
-        y: sc.y,
+        x: startingCrop.x + startingCrop.width - newWidth,
+        y: startingCrop.y,
         width: newWidth,
         height: newHeight,
       };
     }
+    // Side handles scale around the crop center, so dragging one side by N
+    // changes the total crop width/height by 2N.
     case "right": {
-      const newWidth = Math.max(minDim, sc.width + dx);
+      const newWidth = clamp(startingCrop.width + deltaX * 2, minDimension, centeredMaxWidth);
       const newHeight = newWidth / aspectRatio;
-      const yShift = (newHeight - sc.height) / 2;
-      return { x: sc.x, y: sc.y - yShift, width: newWidth, height: newHeight };
+      return {
+        x: centerX - newWidth / 2,
+        y: centerY - newHeight / 2,
+        width: newWidth,
+        height: newHeight,
+      };
     }
     case "left": {
-      const newWidth = Math.max(minDim, sc.width - dx);
+      const newWidth = clamp(startingCrop.width - deltaX * 2, minDimension, centeredMaxWidth);
       const newHeight = newWidth / aspectRatio;
-      const yShift = (newHeight - sc.height) / 2;
       return {
-        x: sc.x + sc.width - newWidth,
-        y: sc.y - yShift,
+        x: centerX - newWidth / 2,
+        y: centerY - newHeight / 2,
         width: newWidth,
         height: newHeight,
       };
     }
     case "top": {
-      const newHeight = Math.max(minDim, sc.height - dy);
-      const newWidth = newHeight * aspectRatio;
-      const xShift = (newWidth - sc.width) / 2;
+      const newWidth = clamp(
+        (startingCrop.height - deltaY * 2) * aspectRatio,
+        minDimension,
+        centeredMaxWidth,
+      );
+      const newHeight = newWidth / aspectRatio;
       return {
-        x: sc.x - xShift,
-        y: sc.y + sc.height - newHeight,
+        x: centerX - newWidth / 2,
+        y: centerY - newHeight / 2,
         width: newWidth,
         height: newHeight,
       };
     }
     case "bottom": {
-      const newHeight = Math.max(minDim, sc.height + dy);
-      const newWidth = newHeight * aspectRatio;
-      const xShift = (newWidth - sc.width) / 2;
+      const newWidth = clamp(
+        (startingCrop.height + deltaY * 2) * aspectRatio,
+        minDimension,
+        centeredMaxWidth,
+      );
+      const newHeight = newWidth / aspectRatio;
       return {
-        x: sc.x - xShift,
-        y: sc.y,
+        x: centerX - newWidth / 2,
+        y: centerY - newHeight / 2,
         width: newWidth,
         height: newHeight,
       };
@@ -206,52 +222,15 @@ function computeResize(
   }
 }
 
-function constrainCrop(
-  crop: CropRect,
-  viewBoxWidth: number,
-  viewBoxHeight: number,
-  aspectRatio: number,
-  minDim: number,
-): CropRect {
-  let { x, y, width, height } = crop;
-
-  height = width / aspectRatio;
-
-  if (width > viewBoxWidth) {
-    width = viewBoxWidth;
-    height = width / aspectRatio;
-  }
-  if (height > viewBoxHeight) {
-    height = viewBoxHeight;
-    width = height * aspectRatio;
-  }
-
-  if (width < minDim) {
-    width = minDim;
-    height = width / aspectRatio;
-  }
-  if (height < minDim) {
-    height = minDim;
-    width = height * aspectRatio;
-  }
-
-  x = Math.max(0, Math.min(x, viewBoxWidth - width));
-  y = Math.max(0, Math.min(y, viewBoxHeight - height));
-
-  return { x, y, width, height };
-}
-
 export function ImagePreview(props: {
-  image: ProjectImage & { url?: string };
+  image: ProjectImage & { objectUrl?: string };
   currentCrop: Rectangle;
   crop: CropRect;
   class?: string;
   onCropChange: (crop: CropRect) => void;
   onCropDone?: () => void;
 }) {
-  const cropAspectRatio = createMemo(() => {
-    return getCropAspectRatio(props.currentCrop);
-  });
+  const cropAspectRatio = createMemo(() => getCropAspectRatio(props.currentCrop));
 
   const previewImage = createMemo(async () => {
     let bitmap: ImageBitmap | undefined;
@@ -260,308 +239,429 @@ export function ImagePreview(props: {
     return bitmap;
   });
 
-  const previewUrl = createMemo(() => {
-    const url = URL.createObjectURL(snapshot(props.image.previewBlob ?? props.image.blob));
-    onCleanup(() => URL.revokeObjectURL(url));
-    return new Promise<string>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(url);
-      image.onerror = reject;
-      image.src = url;
-    });
-  });
-
-  const maskId = encodeURIComponent(createUniqueId());
   const viewBoxHeight = 100;
-  const viewBoxWidth = createMemo(() => {
-    return getImageViewBoxWidth(props.image.width, props.image.height);
-  });
+  const viewBoxWidth = createMemo(() =>
+    getImageViewBoxWidth(props.image.width, props.image.height),
+  );
 
-  const cropFrameRect = createMemo(() => props.crop);
-  const cropFrameGrabberLength = createMemo(() => {
-    return Math.min(
-      cropFrameConfig.grabberLength,
-      cropFrameRect().width / 4,
-      cropFrameRect().height / 4,
-    );
-  });
-  const cropFrameSideGrabberLength = createMemo(() => {
-    return Math.min(
-      cropFrameConfig.sideGrabberLength,
-      cropFrameRect().width / 3,
-      cropFrameRect().height / 3,
-    );
-  });
-  const cropFrameGrabberOffset = createMemo(() => {
-    return cropFrameConfig.grabberStrokeWidth / 2;
-  });
-  const getCropFrameHandlePath = (handle: CropFrameHandle) => {
-    const rect = cropFrameRect();
-    const cornerLength = cropFrameGrabberLength();
-    const sideLength = cropFrameSideGrabberLength();
-    const offset = cropFrameGrabberOffset();
+  // Horizontal viewBox units depend on image aspect ratio. Vertical units are
+  // already percentages because the preview viewBox height is fixed at 100.
+  const xPercent = (x: number) => (x / viewBoxWidth()) * 100;
 
-    switch (handle) {
-      case "top":
-        return [
-          `M ${rect.x + rect.width / 2 - sideLength / 2} ${rect.y - offset}`,
-          `H ${rect.x + rect.width / 2 + sideLength / 2}`,
-        ].join(" ");
-      case "right":
-        return [
-          `M ${rect.x + rect.width + offset} ${rect.y + rect.height / 2 - sideLength / 2}`,
-          `V ${rect.y + rect.height / 2 + sideLength / 2}`,
-        ].join(" ");
-      case "bottom":
-        return [
-          `M ${rect.x + rect.width / 2 - sideLength / 2} ${rect.y + rect.height + offset}`,
-          `H ${rect.x + rect.width / 2 + sideLength / 2}`,
-        ].join(" ");
-      case "left":
-        return [
-          `M ${rect.x - offset} ${rect.y + rect.height / 2 - sideLength / 2}`,
-          `V ${rect.y + rect.height / 2 + sideLength / 2}`,
-        ].join(" ");
-      case "top-left":
-        return [
-          `M ${rect.x + cornerLength} ${rect.y - offset}`,
-          `H ${rect.x - offset}`,
-          `V ${rect.y + cornerLength}`,
-        ].join(" ");
-      case "top-right":
-        return [
-          `M ${rect.x + rect.width - cornerLength} ${rect.y - offset}`,
-          `H ${rect.x + rect.width + offset}`,
-          `V ${rect.y + cornerLength}`,
-        ].join(" ");
-      case "bottom-right":
-        return [
-          `M ${rect.x + rect.width + offset} ${rect.y + rect.height - cornerLength}`,
-          `V ${rect.y + rect.height + offset}`,
-          `H ${rect.x + rect.width - cornerLength}`,
-        ].join(" ");
-      case "bottom-left":
-        return [
-          `M ${rect.x + cornerLength} ${rect.y + rect.height + offset}`,
-          `H ${rect.x - offset}`,
-          `V ${rect.y + rect.height - cornerLength}`,
-        ].join(" ");
-    }
-  };
-  const getCropFrameHandleHitPath = (handle: CropFrameHandle) => {
-    const rect = cropFrameRect();
-    const cornerLength = cropFrameGrabberLength() + cropFrameGrabberOffset();
+  const cropFrameGrabberLength = createMemo(() =>
+    Math.min(cropFrameConfig.cornerGrabberLength, props.crop.width / 4, props.crop.height / 4),
+  );
+  const cropFrameSideGrabberLength = createMemo(() =>
+    Math.min(cropFrameConfig.sideGrabberLength, props.crop.width / 3, props.crop.height / 3),
+  );
 
-    switch (handle) {
-      case "top":
-        return `M ${rect.x} ${rect.y} H ${rect.x + rect.width}`;
-      case "right":
-        return `M ${rect.x + rect.width} ${rect.y} V ${rect.y + rect.height}`;
-      case "bottom":
-        return `M ${rect.x} ${rect.y + rect.height} H ${rect.x + rect.width}`;
-      case "left":
-        return `M ${rect.x} ${rect.y} V ${rect.y + rect.height}`;
-      case "top-left":
-        return [
-          `M ${rect.x + cornerLength} ${rect.y}`,
-          `H ${rect.x}`,
-          `V ${rect.y + cornerLength}`,
-        ].join(" ");
-      case "top-right":
-        return [
-          `M ${rect.x + rect.width - cornerLength} ${rect.y}`,
-          `H ${rect.x + rect.width}`,
-          `V ${rect.y + cornerLength}`,
-        ].join(" ");
-      case "bottom-right":
-        return [
-          `M ${rect.x + rect.width} ${rect.y + rect.height - cornerLength}`,
-          `V ${rect.y + rect.height}`,
-          `H ${rect.x + rect.width - cornerLength}`,
-        ].join(" ");
-      case "bottom-left":
-        return [
-          `M ${rect.x + cornerLength} ${rect.y + rect.height}`,
-          `H ${rect.x}`,
-          `V ${rect.y + rect.height - cornerLength}`,
-        ].join(" ");
-    }
-  };
-
-  const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
+  const [containerRef, setContainerRef] = createSignal<HTMLDivElement>();
   const [dragState, setDragState] = createSignal<DragState>();
+  let dragCursorStyle: HTMLStyleElement | undefined;
 
-  function getMinSvgDim(): number {
-    const svg = svgRef();
-    if (!svg) return 3;
-    const rect = svg.getBoundingClientRect();
-    const vbw = viewBoxWidth();
-    const pixelsPerSvgUnit = rect.width / vbw;
-    return MIN_CROP_SCREEN_PX / pixelsPerSvgUnit;
+  function lockDragCursor(type: DragType) {
+    dragCursorStyle?.remove();
+    dragCursorStyle = document.createElement("style");
+    dragCursorStyle.textContent = `* { cursor: ${getDragCursor(type)} !important; }`;
+    document.head.append(dragCursorStyle);
   }
 
-  function handlePointerDown(e: PointerEvent, type: DragType) {
-    const svg = svgRef();
-    if (!svg) return;
-    const point = clientToSVG(svg, e.clientX, e.clientY);
+  function unlockDragCursor() {
+    dragCursorStyle?.remove();
+    dragCursorStyle = undefined;
+  }
+
+  function clientToPreview(clientX: number, clientY: number): { x: number; y: number } | null {
+    const containerElement = containerRef();
+    if (!containerElement) return null;
+    const rect = containerElement.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    return {
+      x: ((clientX - rect.left) / rect.width) * viewBoxWidth(),
+      y: ((clientY - rect.top) / rect.height) * viewBoxHeight,
+    };
+  }
+
+  function getMinPreviewDimension(): number {
+    const containerElement = containerRef();
+    if (!containerElement) return 3;
+    const rect = containerElement.getBoundingClientRect();
+    if (rect.width === 0) return 3;
+    const pixelsPerUnit = rect.width / viewBoxWidth();
+    return MIN_CROP_SCREEN_PX / pixelsPerUnit;
+  }
+
+  function handlePointerDown(event: PointerEvent, type: DragType) {
+    const point = clientToPreview(event.clientX, event.clientY);
     if (!point) return;
     setDragState({
       type,
       startPointer: point,
       startCrop: { ...props.crop },
     });
-    e.preventDefault();
+    lockDragCursor(type);
+    event.preventDefault();
 
     window.addEventListener("pointermove", handleWindowPointerMove);
     window.addEventListener("pointerup", handleWindowPointerUp);
   }
 
-  function handleWindowPointerMove(e: PointerEvent) {
+  function handleWindowPointerMove(event: PointerEvent) {
     const state = dragState();
-    const svg = svgRef();
-    if (!state || !svg) return;
-    const point = clientToSVG(svg, e.clientX, e.clientY);
+    if (!state) return;
+    const point = clientToPreview(event.clientX, event.clientY);
     if (!point) return;
 
-    const dx = point.x - state.startPointer.x;
-    const dy = point.y - state.startPointer.y;
-    const sc = state.startCrop;
-    const ar = cropAspectRatio();
-    const vbw = viewBoxWidth();
-    const vbh = viewBoxHeight;
-    const minDim = getMinSvgDim();
-
-    let newCrop: CropRect;
+    const deltaX = point.x - state.startPointer.x;
+    const deltaY = point.y - state.startPointer.y;
+    const startingCrop = state.startCrop;
+    const aspectRatio = cropAspectRatio();
+    const currentViewBoxWidth = viewBoxWidth();
+    const minDimension = getMinPreviewDimension();
 
     if (state.type === "move") {
-      newCrop = {
-        x: sc.x + dx,
-        y: sc.y + dy,
-        width: sc.width,
-        height: sc.height,
-      };
-    } else {
-      newCrop = computeResize(state.type, dx, dy, sc, ar, minDim);
+      // Moving preserves size. Clamp position only after making sure the crop
+      // size itself can fit in the image at the requested aspect ratio.
+      const maxWidth = Math.min(currentViewBoxWidth, viewBoxHeight * aspectRatio);
+      const width = clamp(startingCrop.width, Math.min(minDimension, maxWidth), maxWidth);
+      const height = width / aspectRatio;
+      props.onCropChange({
+        x: clamp(startingCrop.x + deltaX, 0, currentViewBoxWidth - width),
+        y: clamp(startingCrop.y + deltaY, 0, viewBoxHeight - height),
+        width,
+        height,
+      });
+      return;
     }
 
-    props.onCropChange(constrainCrop(newCrop, vbw, vbh, ar, minDim));
+    props.onCropChange(
+      computeResize(
+        state.type,
+        deltaX,
+        deltaY,
+        startingCrop,
+        currentViewBoxWidth,
+        viewBoxHeight,
+        aspectRatio,
+        minDimension,
+      ),
+    );
   }
 
   function handleWindowPointerUp() {
     setDragState();
+    unlockDragCursor();
     window.removeEventListener("pointermove", handleWindowPointerMove);
     window.removeEventListener("pointerup", handleWindowPointerUp);
   }
 
   onCleanup(() => {
+    unlockDragCursor();
     window.removeEventListener("pointermove", handleWindowPointerMove);
     window.removeEventListener("pointerup", handleWindowPointerUp);
   });
 
+  // Crop position/size as CSS percentages (memoized strings to keep DOM updates cheap).
+  const cropLeft = createMemo(() => `${xPercent(props.crop.x)}%`);
+  const cropTop = createMemo(() => `${props.crop.y}%`);
+  const cropWidth = createMemo(() => `${xPercent(props.crop.width)}%`);
+  const cropHeight = createMemo(() => `${props.crop.height}%`);
+  const cropRight = createMemo(() => `${xPercent(props.crop.x + props.crop.width)}%`);
+  const cropBottom = createMemo(() => `${props.crop.y + props.crop.height}%`);
+
+  // Visible grabber visuals.
+  //
+  // All grabbers sit OUTSIDE the crop's outline, in the gutter. The outer
+  // edge of every stroke is GRABBER_OUTER_OFFSET_PX away from the crop edge.
+  // Corners are an L formed by two adjacent borders on a single div whose
+  // outer corner is offset diagonally; side handles are a short bar offset
+  // perpendicular to their edge.
+  const STROKE_PX = cropFrameConfig.grabberStrokePx;
+  const FRAME_PX = cropFrameConfig.framePx;
+  const OFFSET_PX = GRABBER_OUTER_OFFSET_PX; // = FRAME_PX + STROKE_PX
+  const stroke = `${STROKE_PX}px solid currentColor`;
+
+  function getCornerGrabber(handle: CropFrameHandle) {
+    const grabberLength = cropFrameGrabberLength();
+    const grabberWidth = `${xPercent(grabberLength)}%`;
+    const grabberHeight = `${grabberLength}%`;
+    // Each corner is a square sized (grabberWidth + OFFSET_PX) x (grabberHeight + OFFSET_PX).
+    // Two adjacent borders form the L; the third side of the box overlaps
+    // the crop edges by the grabber length, painting the inner segments of
+    // the L just outside the outline.
+    const outerWidth = `calc(${grabberWidth} + ${OFFSET_PX}px)`;
+    const outerHeight = `calc(${grabberHeight} + ${OFFSET_PX}px)`;
+
+    const base = {
+      position: "absolute" as const,
+      width: outerWidth,
+      height: outerHeight,
+      "pointer-events": "none" as const,
+    };
+
+    switch (handle) {
+      case "top-left":
+        return {
+          ...base,
+          top: `calc(${cropTop()} - ${OFFSET_PX}px)`,
+          left: `calc(${cropLeft()} - ${OFFSET_PX}px)`,
+          "border-top": stroke,
+          "border-left": stroke,
+        };
+      case "top-right":
+        return {
+          ...base,
+          top: `calc(${cropTop()} - ${OFFSET_PX}px)`,
+          left: `calc(${cropRight()} - ${grabberWidth})`,
+          "border-top": stroke,
+          "border-right": stroke,
+        };
+      case "bottom-right":
+        return {
+          ...base,
+          top: `calc(${cropBottom()} - ${grabberHeight})`,
+          left: `calc(${cropRight()} - ${grabberWidth})`,
+          "border-bottom": stroke,
+          "border-right": stroke,
+        };
+      case "bottom-left":
+        return {
+          ...base,
+          top: `calc(${cropBottom()} - ${grabberHeight})`,
+          left: `calc(${cropLeft()} - ${OFFSET_PX}px)`,
+          "border-bottom": stroke,
+          "border-left": stroke,
+        };
+      default:
+        return base;
+    }
+  }
+
+  function getSideGrabber(handle: CropFrameHandle) {
+    const grabberLength = cropFrameSideGrabberLength();
+
+    if (handle === "top" || handle === "bottom") {
+      const widthCss = `${xPercent(grabberLength)}%`;
+      const leftCss = `${xPercent(props.crop.x + props.crop.width / 2 - grabberLength / 2)}%`;
+      // Use a 0-height div with `border-top`. The stroke ends up immediately
+      // below the div's top edge, so position the top edge such that the
+      // stroke lands just outside the outline.
+      //   top side:    div-top = cropTop - (FRAME + STROKE) → stroke at [-3, -1]
+      //   bottom side: div-top = cropBottom + FRAME         → stroke at [+1, +3]
+      const topCss =
+        handle === "top"
+          ? `calc(${cropTop()} - ${OFFSET_PX}px)`
+          : `calc(${cropBottom()} + ${FRAME_PX}px)`;
+      return {
+        position: "absolute" as const,
+        top: topCss,
+        left: leftCss,
+        width: widthCss,
+        height: "0",
+        "border-top": stroke,
+        "pointer-events": "none" as const,
+      };
+    }
+
+    const heightCss = `${grabberLength}%`;
+    const topCss = `${props.crop.y + props.crop.height / 2 - grabberLength / 2}%`;
+    const leftCss =
+      handle === "left"
+        ? `calc(${cropLeft()} - ${OFFSET_PX}px)`
+        : `calc(${cropRight()} + ${FRAME_PX}px)`;
+    return {
+      position: "absolute" as const,
+      top: topCss,
+      left: leftCss,
+      width: "0",
+      height: heightCss,
+      "border-left": stroke,
+      "pointer-events": "none" as const,
+    };
+  }
+
+  // Hit targets: invisible rectangles centered on the visible grabber strokes
+  // (which sit just outside the crop edge). Sides span the full edge; corners
+  // cover the L plus a buffer outward.
+  function getHitTargetStyle(handle: CropFrameHandle) {
+    const hitStrokePx = cropFrameConfig.hitStrokePx;
+    const half = hitStrokePx / 2;
+    const cornerLen = cropFrameGrabberLength();
+    const grabberWidth = `${xPercent(cornerLen)}%`;
+    const grabberHeight = `${cornerLen}%`;
+
+    const base = {
+      position: "absolute" as const,
+      "touch-action": "none" as const,
+    };
+
+    // Side hit targets span the corresponding crop edge and are centered on
+    // the stroke that sits FRAME+STROKE/2 px outside the edge.
+    const sideHalfPx = half;
+    switch (handle) {
+      case "top":
+        return {
+          ...base,
+          left: cropLeft(),
+          top: `calc(${cropTop()} - ${sideHalfPx}px)`,
+          width: cropWidth(),
+          height: `${hitStrokePx}px`,
+        };
+      case "bottom":
+        return {
+          ...base,
+          left: cropLeft(),
+          top: `calc(${cropBottom()} - ${sideHalfPx}px)`,
+          width: cropWidth(),
+          height: `${hitStrokePx}px`,
+        };
+      case "left":
+        return {
+          ...base,
+          left: `calc(${cropLeft()} - ${sideHalfPx}px)`,
+          top: cropTop(),
+          width: `${hitStrokePx}px`,
+          height: cropHeight(),
+        };
+      case "right":
+        return {
+          ...base,
+          left: `calc(${cropRight()} - ${sideHalfPx}px)`,
+          top: cropTop(),
+          width: `${hitStrokePx}px`,
+          height: cropHeight(),
+        };
+      // Corner hit targets cover the L and extend outward
+      // by `half` px so the user can grab them in the gutter as well.
+      case "top-left":
+        return {
+          ...base,
+          left: `calc(${cropLeft()} - ${half}px)`,
+          top: `calc(${cropTop()} - ${half}px)`,
+          width: `calc(${grabberWidth} + ${half}px)`,
+          height: `calc(${grabberHeight} + ${half}px)`,
+        };
+      case "top-right":
+        return {
+          ...base,
+          left: `calc(${cropRight()} - ${grabberWidth})`,
+          top: `calc(${cropTop()} - ${half}px)`,
+          width: `calc(${grabberWidth} + ${half}px)`,
+          height: `calc(${grabberHeight} + ${half}px)`,
+        };
+      case "bottom-right":
+        return {
+          ...base,
+          left: `calc(${cropRight()} - ${grabberWidth})`,
+          top: `calc(${cropBottom()} - ${grabberHeight})`,
+          width: `calc(${grabberWidth} + ${half}px)`,
+          height: `calc(${grabberHeight} + ${half}px)`,
+        };
+      case "bottom-left":
+        return {
+          ...base,
+          left: `calc(${cropLeft()} - ${half}px)`,
+          top: `calc(${cropBottom()} - ${grabberHeight})`,
+          width: `calc(${grabberWidth} + ${half}px)`,
+          height: `calc(${grabberHeight} + ${half}px)`,
+        };
+    }
+  }
+
   return (
-    <svg
-      ref={setSvgRef}
+    <div
+      ref={setContainerRef}
       class={cn(
-        "block h-full w-auto max-h-full max-w-full min-w-0 [dynamic-range-limit:standard] overflow-visible",
+        "relative min-h-full max-w-full [dynamic-range-limit:standard] text-foreground",
         props.class,
       )}
-      viewBox={`0 0 ${viewBoxWidth()} ${viewBoxHeight}`}
       style={{
         "aspect-ratio": props.image.width / props.image.height,
       }}
     >
-      <defs>
-        <mask id={maskId}>
-          <rect
-            width={viewBoxWidth()}
-            height={viewBoxHeight}
-            fill="white"
-            opacity={cropFrameConfig.outerOpacity}
-          />
-          <rect
-            x={props.crop.x}
-            y={props.crop.y}
-            width={props.crop.width}
-            height={props.crop.height}
-            fill="white"
-            opacity={0.95}
-          />
-        </mask>
-      </defs>
-      <g mask={`url(#${maskId})`}>
-        {isSafariBrowser() ? (
-          <image
-            href={previewUrl()}
-            x={0}
-            y={0}
-            width={viewBoxWidth()}
-            height={viewBoxHeight}
-            preserveAspectRatio="none"
-          />
-        ) : (
-          <foreignObject x={0} y={0} width={viewBoxWidth()} height={viewBoxHeight}>
-            <PreviewCanvas source={previewImage()} />
-          </foreignObject>
-        )}
-      </g>
-      <rect
-        x={props.crop.x}
-        y={props.crop.y}
-        width={props.crop.width}
-        height={props.crop.height}
-        fill="transparent"
-        cursor="move"
-        pointer-events="fill"
+      {/* Image */}
+      <PreviewCanvas source={previewImage()} class="absolute inset-0 h-full w-full" />
+
+      {/* Inner dim across the entire image (applies to inside-crop too). */}
+      <div
+        class="pointer-events-none absolute inset-0 bg-background"
+        style={{ opacity: INNER_DIM_OPACITY }}
+      />
+
+      {/* Outer dim: 4 strips around the crop rect. */}
+      <div
+        class="pointer-events-none absolute left-0 right-0 bg-background"
+        style={{ top: 0, height: cropTop(), opacity: OUTER_DIM_OPACITY }}
+      />
+      <div
+        class="pointer-events-none absolute left-0 right-0 bg-background"
+        style={{ top: cropBottom(), bottom: 0, opacity: OUTER_DIM_OPACITY }}
+      />
+      <div
+        class="pointer-events-none absolute bg-background"
+        style={{
+          left: 0,
+          width: cropLeft(),
+          top: cropTop(),
+          height: cropHeight(),
+          opacity: OUTER_DIM_OPACITY,
+        }}
+      />
+      <div
+        class="pointer-events-none absolute bg-background"
+        style={{
+          left: cropRight(),
+          right: 0,
+          top: cropTop(),
+          height: cropHeight(),
+          opacity: OUTER_DIM_OPACITY,
+        }}
+      />
+
+      {/* Crop frame border. */}
+      <div
+        class="pointer-events-none absolute"
+        style={{
+          left: cropLeft(),
+          top: cropTop(),
+          width: cropWidth(),
+          height: cropHeight(),
+          outline: `${cropFrameConfig.framePx}px solid currentColor`,
+        }}
+      />
+
+      {/* Visible grabbers. */}
+      <For each={CROP_FRAME_HANDLES}>
+        {(handle) => {
+          const isCorner = () => handle().includes("-");
+          return <div style={isCorner() ? getCornerGrabber(handle()) : getSideGrabber(handle())} />;
+        }}
+      </For>
+
+      {/* Move target (covers the crop area). */}
+      <div
+        class="absolute cursor-move"
+        style={{
+          left: cropLeft(),
+          top: cropTop(),
+          width: cropWidth(),
+          height: cropHeight(),
+          "touch-action": "none",
+        }}
         onDblClick={() => props.onCropDone?.()}
-        onPointerDown={(e) => handlePointerDown(e, "move")}
+        onPointerDown={(event) => handlePointerDown(event, "move")}
       />
-      <g
-        fill="none"
-        class="stroke-foreground"
-        stroke-linecap="square"
-        stroke-width={cropFrameConfig.grabberStrokeWidth}
-        vector-effect="non-scaling-stroke"
-      >
-        <For each={CROP_FRAME_HANDLES}>
-          {(handle) => (
-            <path
-              class={getCropFrameHandleCursor(handle())}
-              d={getCropFrameHandlePath(handle())}
-              pointer-events="stroke"
-              onPointerDown={(e) => handlePointerDown(e, handle())}
-            />
-          )}
-        </For>
-      </g>
-      <rect
-        fill="none"
-        pointer-events="none"
-        class="stroke-foreground"
-        stroke-width={cropFrameConfig.frameStrokeWidth}
-        vector-effect="non-scaling-stroke"
-        x={cropFrameRect().x}
-        y={cropFrameRect().y}
-        width={cropFrameRect().width}
-        height={cropFrameRect().height}
-      />
-      <g
-        fill="none"
-        stroke="transparent"
-        stroke-linecap="square"
-        stroke-width={cropFrameConfig.handleHitStrokeWidth}
-        vector-effect="non-scaling-stroke"
-      >
-        <For each={CROP_FRAME_HANDLES}>
-          {(handle) => (
-            <path
-              class={getCropFrameHandleCursor(handle())}
-              d={getCropFrameHandleHitPath(handle())}
-              pointer-events="stroke"
-              onPointerDown={(e) => handlePointerDown(e, handle())}
-            />
-          )}
-        </For>
-      </g>
-    </svg>
+
+      {/* Handle hitStrokePx targets. */}
+      <For each={CROP_FRAME_HANDLES}>
+        {(handle) => (
+          <div
+            class={getCropFrameHandleCursor(handle())}
+            style={getHitTargetStyle(handle())}
+            onPointerDown={(event) => handlePointerDown(event, handle())}
+          />
+        )}
+      </For>
+    </div>
   );
 }
