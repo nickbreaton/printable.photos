@@ -27,6 +27,7 @@ import {
   Show,
   createEffect,
   snapshot,
+  resolve,
 } from "solid-js";
 import { type ImageShape, type PaperSettings, type ProjectImage } from "./data";
 import type { PackedImageRectangle } from "./layout";
@@ -380,6 +381,9 @@ function Pages() {
                               image().width,
                               image().height,
                             ),
+                          );
+                          await resolve(() =>
+                            projectImages.find((image) => image.id),
                           );
                           dialogRef()?.close();
                         }}
