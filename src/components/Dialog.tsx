@@ -9,6 +9,8 @@ export interface DialogProps {
 }
 
 export function Dialog(props: DialogProps) {
+  let isBackdropPointerDown = false;
+
   return (
     <Loading>
       <dialog
@@ -17,10 +19,15 @@ export function Dialog(props: DialogProps) {
           "mx-auto mt-[10vh] grid gap-4 border bg-background p-6 shadow-lg backdrop:bg-black/80 sm:rounded-lg",
           props.class,
         )}
+        onPointerDown={(event) => {
+          isBackdropPointerDown = event.target === event.currentTarget;
+        }}
         onClick={(event) => {
-          if (event.target === event.currentTarget) {
+          if (isBackdropPointerDown && event.target === event.currentTarget) {
             event.currentTarget.close();
           }
+
+          isBackdropPointerDown = false;
         }}
         onClose={props.onClose}
       >
