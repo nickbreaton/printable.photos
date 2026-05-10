@@ -381,10 +381,7 @@ function Pages() {
                         onCropChange={setCrop}
                         onCropDone={saveSelectedCrop}
                       />
-                      <Button
-                        type="button"
-                        onClick={saveSelectedCrop}
-                      >
+                      <Button type="button" onClick={saveSelectedCrop}>
                         Done
                       </Button>
                     </>
@@ -409,7 +406,7 @@ function Pages() {
                 {(rect) => (
                   <button
                     type="button"
-                    class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 transition-[outline-color,outline-width,opacity] hover:outline-[4px] hover:outline-ring/50 hover:opacity-95 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
+                    class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:opacity-80 dark:hover:opacity-70 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
                     style={getPhotoStyle(rect(), paper())}
                     title="Open image dialog"
                     onClick={() => openCropDialog(rect())}
