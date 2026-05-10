@@ -3,5 +3,12 @@
     "language_server": {
       "name": "oxfmt"
     }
+  },
+  "lsp": {
+    "tailwindcss-language-server": {
+      "settings": {
+        "validate": false
+      }
+    }
   }
 }
