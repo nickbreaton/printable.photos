@@ -4,7 +4,7 @@ import type { JSX } from "@solidjs/web";
 import "./style.css";
 import { Button } from "./components/Button";
 import { Checkbox } from "./components/Checkbox";
-import { downloadPdfFromCurrentLayout } from "./download";
+import { downloadPdfFromCurrentLayout, downloadPhotosFromCurrentLayout } from "./download";
 import { FieldLabel } from "./components/FieldLabel";
 import { Dialog } from "./components/Dialog";
 import { FileInput } from "./components/FileInput";
@@ -253,20 +253,38 @@ function Sidebar() {
           })}
         />
       </fieldset>
-      <Button
-        type="button"
-        disabled={downloading()}
-        onClick={action(function* () {
-          setDownloading(true);
-          yield downloadPdfFromCurrentLayout({
-            bins: [...bins],
-            paper: paper(),
-            images: [...snapshot(projectImages)],
-          });
-        })}
-      >
-        Download PDF
-      </Button>
+      <div class="grid grid-cols-2 gap-2">
+        <Button
+          type="button"
+          class="min-w-0"
+          disabled={downloading()}
+          onClick={action(function* () {
+            setDownloading(true);
+            yield downloadPdfFromCurrentLayout({
+              bins: [...bins],
+              paper: paper(),
+              images: [...snapshot(projectImages)],
+            });
+          })}
+        >
+          Download PDF
+        </Button>
+        <Button
+          type="button"
+          class="min-w-0"
+          disabled={downloading()}
+          onClick={action(function* () {
+            setDownloading(true);
+            yield downloadPhotosFromCurrentLayout({
+              bins: [...bins],
+              paper: paper(),
+              images: [...snapshot(projectImages)],
+            });
+          })}
+        >
+          Download Photos
+        </Button>
+      </div>
     </aside>
   );
 }

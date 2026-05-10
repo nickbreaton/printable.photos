@@ -29,6 +29,12 @@ interface DownloadPdfFromCurrentLayoutOptions {
   images: DownloadImage[];
 }
 
+interface DownloadPhotosFromCurrentLayoutOptions {
+  bins: PackedImageBin[];
+  paper: PaperLayout;
+  images: DownloadImage[];
+}
+
 function toInches(value: number, units: PaperLayout["units"]) {
   return units === "mm" ? value / 25.4 : value;
 }
@@ -67,6 +73,7 @@ async function renderImageForRect(
   rect: PackedImageRectangle,
   targetWidthPx: number,
   targetHeightPx: number,
+  resize: "pica" | "canvas" = "pica",
 ) {
   const sourceBitmap = await createImageBitmap(image.blob);
 
@@ -98,12 +105,21 @@ async function renderImageForRect(
     );
 
     const fittedCanvas = createCanvas(preRotationWidth, preRotationHeight);
-    await pica.resize(croppedCanvas, fittedCanvas, {
-      quality: 3,
-      unsharpAmount: 80,
-      unsharpRadius: 0.6,
-      unsharpThreshold: 2,
-    });
+
+    if (resize === "pica") {
+      await pica.resize(croppedCanvas, fittedCanvas, {
+        quality: 3,
+        unsharpAmount: 80,
+        unsharpRadius: 0.6,
+        unsharpThreshold: 2,
+      });
+    } else {
+      const fittedContext = get2dContext(fittedCanvas, "Failed to create fitted canvas context");
+
+      fittedContext.imageSmoothingEnabled = true;
+      fittedContext.imageSmoothingQuality = "high";
+      fittedContext.drawImage(croppedCanvas, 0, 0, fittedCanvas.width, fittedCanvas.height);
+    }
 
     if (!rect.rot) {
       return fittedCanvas;
@@ -149,6 +165,89 @@ function downloadBlob(blob: Blob, filename: string) {
   link.remove();
 
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+function openBlobInNewTab(blob: Blob, tab: Window | null) {
+  const url = URL.createObjectURL(blob);
+
+  if (tab) {
+    tab.opener = null;
+    tab.location.href = url;
+  } else {
+    window.open(url, "_blank", "noopener");
+  }
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+async function renderPageCanvas(
+  bin: PackedImageBin,
+  imagesById: Map<string, DownloadImage>,
+  paper: PaperLayout,
+) {
+  const pageWidthPx = Math.max(1, Math.ceil(toInches(paper.width, paper.units) * EXPORT_DPI));
+  const pageHeightPx = Math.max(1, Math.ceil(toInches(paper.height, paper.units) * EXPORT_DPI));
+  const pageCanvas = createCanvas(pageWidthPx, pageHeightPx);
+  const pageContext = get2dContext(pageCanvas, "Failed to create page canvas context");
+
+  pageContext.fillStyle = "#ffffff";
+  pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+  for (const rect of bin.rects) {
+    const image = imagesById.get(rect.data.id);
+
+    if (!image) {
+      throw new Error(`Missing image for packed rectangle: ${rect.data.id}`);
+    }
+
+    const placedWidthInches = toInches(rect.width, paper.units);
+    const placedHeightInches = toInches(rect.height, paper.units);
+    const targetWidthPx = Math.max(1, Math.ceil(placedWidthInches * EXPORT_DPI));
+    const targetHeightPx = Math.max(1, Math.ceil(placedHeightInches * EXPORT_DPI));
+    const imageCanvas = await renderImageForRect(
+      image,
+      rect,
+      targetWidthPx,
+      targetHeightPx,
+      "canvas",
+    );
+    const rectXPx = Math.round(toInches(rect.x, paper.units) * EXPORT_DPI);
+    const rectYPx = Math.round(toInches(rect.y, paper.units) * EXPORT_DPI);
+
+    pageContext.drawImage(imageCanvas, rectXPx, rectYPx, targetWidthPx, targetHeightPx);
+  }
+
+  return pageCanvas;
+}
+
+export async function downloadPhotosFromCurrentLayout(
+  options: DownloadPhotosFromCurrentLayoutOptions,
+) {
+  const imagesById = new Map(options.images.map((image) => [image.id, image]));
+  const tabs = options.bins.map(() => window.open("", "_blank"));
+  const blobs = await Promise.all(
+    options.bins.map(async (bin) => {
+      const canvas = await renderPageCanvas(bin, imagesById, options.paper);
+
+      return new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (output) => {
+            if (output) {
+              resolve(output);
+            } else {
+              reject(new Error("Failed to encode page canvas"));
+            }
+          },
+          "image/jpeg",
+          JPEG_QUALITY,
+        );
+      });
+    }),
+  );
+
+  for (const [index, blob] of blobs.entries()) {
+    openBlobInNewTab(blob, tabs[index] ?? null);
+  }
 }
 
 export async function downloadPdfFromCurrentLayout(options: DownloadPdfFromCurrentLayoutOptions) {
