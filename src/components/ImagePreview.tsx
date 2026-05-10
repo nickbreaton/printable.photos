@@ -279,18 +279,24 @@ export function ImagePreview(props: {
   });
 
   const previewImage = createMemo(() => {
-    const url = URL.createObjectURL(snapshot(props.image.blob));
-    onCleanup(() => URL.revokeObjectURL(url));
+    const promise = createImageBitmap(snapshot(props.image.blob));
+    let image: ImageBitmap | undefined;
+    let disposed = false;
 
-    return new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => {
-        resolve(image);
-        URL.revokeObjectURL(url);
-      };
-      image.onerror = reject;
-      image.src = url;
+    promise.then((resolvedImage) => {
+      image = resolvedImage;
+
+      if (disposed) {
+        resolvedImage.close();
+      }
     });
+
+    onCleanup(() => {
+      disposed = true;
+      image?.close();
+    });
+
+    return promise;
   });
 
   const maskId = encodeURIComponent(createUniqueId());
@@ -437,14 +443,14 @@ export function ImagePreview(props: {
     window.addEventListener("pointerup", handleWindowPointerUp);
   }
 
-  function renderImage(source: () => HTMLImageElement) {
+  function renderImage(source: () => ImageBitmap) {
     let canvas: HTMLCanvasElement | undefined;
 
     createEffect(source, (image) => {
       if (!canvas) return;
 
-      const width = image.naturalWidth || image.width;
-      const height = image.naturalHeight || image.height;
+      const width = image.width;
+      const height = image.height;
       const context = canvas.getContext("2d");
 
       if (!context) return;

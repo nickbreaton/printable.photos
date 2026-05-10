@@ -24,15 +24,6 @@ import { createPreviewBlob } from "./utils";
 const PREVIEW_DPI = 160;
 const MAX_PREVIEW_EDGE_PX = 1600;
 
-function createImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = src;
-  });
-}
-
 export const project = createProjection((): Promise<Project> => {
   return db.table("projects").get("DEFAULT");
 }, {} as Project);
@@ -115,26 +106,32 @@ export const addImages = action(function* (files: FileList) {
   );
 
   for (const file of files) {
-    const url = URL.createObjectURL(snapshot(file));
-    const img = yield createImage(url);
-    URL.revokeObjectURL(url);
-    const previewBlob = yield createPreviewBlob(file, img, maxPreviewEdgePx);
-    const now = Date.now();
+    const bitmap = yield createImageBitmap(snapshot(file));
+    try {
+      const previewBlob = yield createPreviewBlob(
+        file,
+        bitmap,
+        maxPreviewEdgePx,
+      );
+      const now = Date.now();
 
-    nextImages.push({
-      id: crypto.randomUUID(),
-      projectId: currentProjectId,
-      order: nextOrder + nextImages.length,
-      name: file.name,
-      type: file.type,
-      width: img.width,
-      height: img.height,
-      blob: file,
-      previewBlob,
-      crops: {},
-      createdAt: now,
-      updatedAt: now,
-    });
+      nextImages.push({
+        id: crypto.randomUUID(),
+        projectId: currentProjectId,
+        order: nextOrder + nextImages.length,
+        name: file.name,
+        type: file.type,
+        width: bitmap.width,
+        height: bitmap.height,
+        blob: file,
+        previewBlob,
+        crops: {},
+        createdAt: now,
+        updatedAt: now,
+      });
+    } finally {
+      bitmap.close();
+    }
   }
 
   if (nextImages.length === 0) {
