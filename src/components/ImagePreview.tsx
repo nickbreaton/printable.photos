@@ -315,6 +315,7 @@ export function ImagePreview(props: {
   currentCrop: Rectangle;
   crop: CropRect;
   onCropChange: (crop: CropRect) => void;
+  onCropDone?: () => void;
 }) {
   const cropAspectRatio = createMemo(() => {
     return getCropAspectRatio(props.currentCrop);
@@ -583,6 +584,7 @@ export function ImagePreview(props: {
         fill="transparent"
         cursor="move"
         pointer-events="fill"
+        onDblClick={() => props.onCropDone?.()}
         onPointerDown={(e) => handlePointerDown(e, "move")}
       />
       <g

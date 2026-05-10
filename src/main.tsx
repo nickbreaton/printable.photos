@@ -331,6 +331,22 @@ function Pages() {
     setSelectedCrop(sc);
   }
 
+  async function saveSelectedCrop() {
+    const sc = selectedCrop();
+    const c = crop();
+    const image = selectedImage();
+
+    if (!sc || !c || !image) return;
+
+    await saveImageCrop(
+      image.id,
+      getCropKey(sc),
+      cropToPercentages(c, image.width, image.height),
+    );
+    await resolve(() => projectImages.find((image) => image.id));
+    dialogRef()?.close();
+  }
+
   createEffect(
     () => {
       const sc = selectedCrop();
@@ -368,25 +384,12 @@ function Pages() {
                         currentCrop={sc()}
                         crop={c()}
                         onCropChange={setCrop}
+                        onCropDone={saveSelectedCrop}
                       />
                       <button
                         type="button"
                         class="border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-                        onClick={async () => {
-                          await saveImageCrop(
-                            image().id,
-                            getCropKey(sc()),
-                            cropToPercentages(
-                              c(),
-                              image().width,
-                              image().height,
-                            ),
-                          );
-                          await resolve(() =>
-                            projectImages.find((image) => image.id),
-                          );
-                          dialogRef()?.close();
-                        }}
+                        onClick={saveSelectedCrop}
                       >
                         Done
                       </button>
