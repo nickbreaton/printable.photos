@@ -338,7 +338,7 @@ function Pages() {
     if (!window.confirm("Delete this image?")) return;
 
     await deleteImage(image.id);
-    await resolve(() => !projectImages.find((projectImage) => projectImage.id === image.id));
+    await resolve(() => projectImages.length);
     dialogRef()?.close();
   }
 
