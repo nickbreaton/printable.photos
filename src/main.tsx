@@ -381,9 +381,18 @@ function Pages() {
                         onCropChange={setCrop}
                         onCropDone={saveSelectedCrop}
                       />
-                      <Button type="button" onClick={saveSelectedCrop}>
-                        Done
-                      </Button>
+                      <div class="flex items-center justify-between gap-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => dialogRef()?.close()}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="button" onClick={saveSelectedCrop}>
+                          Done
+                        </Button>
+                      </div>
                     </>
                   )}
                 </Show>
