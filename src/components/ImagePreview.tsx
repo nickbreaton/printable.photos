@@ -4,13 +4,17 @@ import {
   createSignal,
   createUniqueId,
   For,
-  Loading,
   onCleanup,
   snapshot,
 } from "solid-js";
 import type { Rectangle } from "maxrects-packer";
 
 import type { ProjectImage } from "../data";
+import {
+  getCropAspectRatio,
+  getImageViewBoxWidth,
+  type CropRect,
+} from "../crop";
 
 const MIN_CROP_SCREEN_PX = 100;
 
@@ -60,78 +64,6 @@ function getCropFrameHandleCursor(handle: CropFrameHandle) {
   return "cursor-nesw-resize";
 }
 
-export interface CropRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface CropPercentages {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export function getCropAspectRatio(currentCrop: Rectangle) {
-  return currentCrop.rot
-    ? currentCrop.height / currentCrop.width
-    : currentCrop.width / currentCrop.height;
-}
-
-export function getCropKey(currentCrop: Rectangle) {
-  return getCropAspectRatio(currentCrop).toFixed(6);
-}
-
-export function computeInitialCrop(
-  imageWidth: number,
-  imageHeight: number,
-  currentCrop: Rectangle,
-): CropRect {
-  const imageAR = imageWidth / imageHeight;
-  const cropAR = getCropAspectRatio(currentCrop);
-  const vbw = 100 * imageAR;
-  const widthPercent = Math.min(cropAR / imageAR, 1);
-  const heightPercent = Math.min(imageAR / cropAR, 1);
-  const width = widthPercent * vbw;
-  const height = heightPercent * 100;
-  return {
-    x: (vbw - width) / 2,
-    y: (100 - height) / 2,
-    width,
-    height,
-  };
-}
-
-export function cropToPercentages(
-  crop: CropRect,
-  imageWidth: number,
-  imageHeight: number,
-): CropPercentages {
-  const vbw = 100 * (imageWidth / imageHeight);
-  return {
-    x: (crop.x / vbw) * 100,
-    y: crop.y,
-    width: (crop.width / vbw) * 100,
-    height: crop.height,
-  };
-}
-
-export function cropFromPercentages(
-  crop: CropPercentages,
-  imageWidth: number,
-  imageHeight: number,
-): CropRect {
-  const vbw = 100 * (imageWidth / imageHeight);
-  return {
-    x: (crop.x / 100) * vbw,
-    y: crop.y,
-    width: (crop.width / 100) * vbw,
-    height: crop.height,
-  };
-}
-
 function clientToSVG(
   svg: SVGSVGElement,
   clientX: number,
@@ -177,7 +109,9 @@ function PreviewCanvas(props: { source: ImageBitmap }) {
 
   return (
     <canvas
-      ref={canvas}
+      ref={(element) => {
+        canvas = element;
+      }}
       style={{
         display: "block",
         width: "100%",
@@ -344,7 +278,9 @@ export function ImagePreview(props: {
   const maskId = encodeURIComponent(createUniqueId());
   const imageAspectRatio = () => props.image.width / props.image.height;
   const viewBoxHeight = 100;
-  const viewBoxWidth = createMemo(() => viewBoxHeight * imageAspectRatio());
+  const viewBoxWidth = createMemo(() => {
+    return getImageViewBoxWidth(props.image.width, props.image.height);
+  });
 
   const cropFrameRect = createMemo(() => props.crop);
   const cropFrameGrabberLength = createMemo(() => {

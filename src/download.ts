@@ -1,6 +1,17 @@
 import picaFactory from "pica";
 import { PDFDocument } from "pdf-lib";
-import type { PackedImageBin } from "./layout";
+import {
+  computeInitialCrop,
+  cropFromPercentages,
+  cropToSourcePixels,
+  getCropKey,
+} from "./crop";
+import type { CropCoordinates } from "./data";
+import type { PackedImageBin, PackedImageRectangle } from "./layout";
+
+const EXPORT_DPI = 300;
+const JPEG_QUALITY = 0.94;
+const pica = picaFactory();
 
 interface PaperLayout {
   width: number;
@@ -8,30 +19,172 @@ interface PaperLayout {
   units: "in" | "mm";
 }
 
+interface DownloadImage {
+  id: string;
+  width: number;
+  height: number;
+  blob: Blob;
+  type: string;
+  crops: Record<string, CropCoordinates>;
+}
+
 interface DownloadPdfFromCurrentLayoutOptions {
   bins: PackedImageBin[];
   paper: PaperLayout;
-  images: { id: string; blob: Blob }[];
+  images: DownloadImage[];
+}
+
+function toInches(value: number, units: PaperLayout["units"]) {
+  return units === "mm" ? value / 25.4 : value;
+}
+
+function getOutputMimeType(image: DownloadImage) {
+  return image.type === "image/png" || image.blob.type === "image/png"
+    ? "image/png"
+    : "image/jpeg";
+}
+
+function getPlacedCrop(image: DownloadImage, rect: PackedImageRectangle) {
+  const savedCrop = image.crops?.[getCropKey(rect)];
+
+  return savedCrop
+    ? cropFromPercentages(savedCrop, image.width, image.height)
+    : computeInitialCrop(image.width, image.height, rect);
+}
+
+function createCanvas(width: number, height: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+}
+
+function get2dContext(canvas: HTMLCanvasElement, errorMessage: string) {
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error(errorMessage);
+  }
+
+  return context;
+}
+
+async function renderImageForRect(
+  image: DownloadImage,
+  rect: PackedImageRectangle,
+  targetWidthPx: number,
+  targetHeightPx: number,
+) {
+  const sourceBitmap = await createImageBitmap(image.blob);
+
+  try {
+    const crop = getPlacedCrop(image, rect);
+    const sourceCrop = cropToSourcePixels(crop, image.width, image.height);
+    const cropX = Math.max(0, Math.min(image.width - 1, sourceCrop.x));
+    const cropY = Math.max(0, Math.min(image.height - 1, sourceCrop.y));
+    const cropWidth = Math.max(
+      1,
+      Math.min(image.width - cropX, sourceCrop.width),
+    );
+    const cropHeight = Math.max(
+      1,
+      Math.min(image.height - cropY, sourceCrop.height),
+    );
+    const preRotationWidth = rect.rot ? targetHeightPx : targetWidthPx;
+    const preRotationHeight = rect.rot ? targetWidthPx : targetHeightPx;
+    const croppedCanvas = createCanvas(
+      Math.max(1, Math.round(cropWidth)),
+      Math.max(1, Math.round(cropHeight)),
+    );
+    const croppedContext = get2dContext(
+      croppedCanvas,
+      "Failed to create cropped canvas context",
+    );
+
+    croppedContext.drawImage(
+      sourceBitmap,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      croppedCanvas.width,
+      croppedCanvas.height,
+    );
+
+    const fittedCanvas = createCanvas(preRotationWidth, preRotationHeight);
+    await pica.resize(croppedCanvas, fittedCanvas, {
+      quality: 3,
+      unsharpAmount: 80,
+      unsharpRadius: 0.6,
+      unsharpThreshold: 2,
+    });
+
+    if (!rect.rot) {
+      return fittedCanvas;
+    }
+
+    const rotatedCanvas = createCanvas(targetWidthPx, targetHeightPx);
+    const rotatedContext = get2dContext(
+      rotatedCanvas,
+      "Failed to create rotated canvas context",
+    );
+
+    rotatedContext.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+    rotatedContext.rotate(Math.PI / 2);
+    rotatedContext.drawImage(
+      fittedCanvas,
+      -fittedCanvas.width / 2,
+      -fittedCanvas.height / 2,
+    );
+
+    return rotatedCanvas;
+  } finally {
+    sourceBitmap.close();
+  }
+}
+
+async function embedCanvas(
+  pdf: PDFDocument,
+  canvas: HTMLCanvasElement,
+  mimeType: "image/jpeg" | "image/png",
+) {
+  const blob = await pica.toBlob(
+    canvas,
+    mimeType,
+    mimeType === "image/jpeg" ? JPEG_QUALITY : undefined,
+  );
+  const bytes = await blob.arrayBuffer();
+
+  return mimeType === "image/png"
+    ? pdf.embedPng(bytes)
+    : pdf.embedJpg(bytes);
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.append(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 export async function downloadPdfFromCurrentLayout(
   options: DownloadPdfFromCurrentLayoutOptions,
 ) {
-  const toInches = (value: number) => {
-    if (options.paper.units === "mm") {
-      return value / 25.4;
-    }
-
-    return value;
-  };
-
   const pdf = await PDFDocument.create();
-  const pica = picaFactory();
   const imagesById = new Map(options.images.map((image) => [image.id, image]));
+  const pageWidthPt = toInches(options.paper.width, options.paper.units) * 72;
+  const pageHeightPt = toInches(options.paper.height, options.paper.units) * 72;
 
   for (const bin of options.bins) {
-    const pageWidthPt = toInches(options.paper.width) * 72;
-    const pageHeightPt = toInches(options.paper.height) * 72;
     const page = pdf.addPage([pageWidthPt, pageHeightPt]);
 
     for (const rect of bin.rects) {
@@ -41,113 +194,31 @@ export async function downloadPdfFromCurrentLayout(
         throw new Error(`Missing image for packed rectangle: ${rect.data.id}`);
       }
 
-      const { blob } = image;
-
-      const placedWidthInches = toInches(rect.width);
-      const placedHeightInches = toInches(rect.height);
-      const targetPxW = Math.max(1, Math.ceil(placedWidthInches * 300));
-      const targetPxH = Math.max(1, Math.ceil(placedHeightInches * 300));
-
-      const sourceBitmap = await createImageBitmap(blob);
-
-      const sourceCanvas = document.createElement("canvas");
-      sourceCanvas.width = sourceBitmap.width;
-      sourceCanvas.height = sourceBitmap.height;
-      const sourceContext = sourceCanvas.getContext("2d");
-      if (!sourceContext) {
-        sourceBitmap.close();
-        throw new Error("Failed to create source canvas context");
-      }
-      sourceContext.drawImage(sourceBitmap, 0, 0);
-      sourceBitmap.close();
-
-      const fitTargetPxW = rect.rot ? targetPxH : targetPxW;
-      const fitTargetPxH = rect.rot ? targetPxW : targetPxH;
-      const coverScale = Math.max(
-        fitTargetPxW / sourceCanvas.width,
-        fitTargetPxH / sourceCanvas.height,
-      );
-      const cropPxW = Math.max(
+      const placedWidthInches = toInches(rect.width, options.paper.units);
+      const placedHeightInches = toInches(rect.height, options.paper.units);
+      const targetWidthPx = Math.max(
         1,
-        Math.min(sourceCanvas.width, Math.round(fitTargetPxW / coverScale)),
+        Math.ceil(placedWidthInches * EXPORT_DPI),
       );
-      const cropPxH = Math.max(
+      const targetHeightPx = Math.max(
         1,
-        Math.min(sourceCanvas.height, Math.round(fitTargetPxH / coverScale)),
+        Math.ceil(placedHeightInches * EXPORT_DPI),
       );
-      const cropOffsetX = Math.floor((sourceCanvas.width - cropPxW) / 2);
-      const cropOffsetY = Math.floor((sourceCanvas.height - cropPxH) / 2);
-
-      const croppedCanvas = document.createElement("canvas");
-      croppedCanvas.width = cropPxW;
-      croppedCanvas.height = cropPxH;
-      const croppedContext = croppedCanvas.getContext("2d");
-      if (!croppedContext) {
-        throw new Error("Failed to create cropped canvas context");
-      }
-      croppedContext.drawImage(
-        sourceCanvas,
-        cropOffsetX,
-        cropOffsetY,
-        cropPxW,
-        cropPxH,
-        0,
-        0,
-        cropPxW,
-        cropPxH,
+      const canvas = await renderImageForRect(
+        image,
+        rect,
+        targetWidthPx,
+        targetHeightPx,
       );
-
-      const fitPxW = Math.max(1, Math.min(cropPxW, fitTargetPxW));
-      const fitPxH = Math.max(1, Math.min(cropPxH, fitTargetPxH));
-      const fitCanvas = document.createElement("canvas");
-      fitCanvas.width = fitPxW;
-      fitCanvas.height = fitPxH;
-
-      await pica.resize(croppedCanvas, fitCanvas, {
-        quality: 3,
-        unsharpAmount: 80,
-        unsharpRadius: 0.6,
-        unsharpThreshold: 2,
-      });
-
-      let pdfImageCanvas = fitCanvas;
-      if (rect.rot) {
-        const rotatedCanvas = document.createElement("canvas");
-        rotatedCanvas.width = fitCanvas.height;
-        rotatedCanvas.height = fitCanvas.width;
-        const rotatedContext = rotatedCanvas.getContext("2d");
-        if (!rotatedContext) {
-          throw new Error("Failed to create rotated canvas context");
-        }
-
-        rotatedContext.translate(
-          rotatedCanvas.width / 2,
-          rotatedCanvas.height / 2,
-        );
-        rotatedContext.rotate(Math.PI / 2);
-        rotatedContext.drawImage(
-          fitCanvas,
-          -fitCanvas.width / 2,
-          -fitCanvas.height / 2,
-        );
-        pdfImageCanvas = rotatedCanvas;
-      }
-
-      const mimeType = blob.type === "image/png" ? "image/png" : "image/jpeg";
-      const resizedBlob = await pica.toBlob(
-        pdfImageCanvas,
-        mimeType,
-        mimeType === "image/jpeg" ? 0.92 : undefined,
+      const embeddedImage = await embedCanvas(
+        pdf,
+        canvas,
+        getOutputMimeType(image),
       );
-      const resizedBytes = await resizedBlob.arrayBuffer();
-      const embeddedImage =
-        mimeType === "image/png"
-          ? await pdf.embedPng(resizedBytes)
-          : await pdf.embedJpg(resizedBytes);
-
-      const rectXPt = toInches(rect.x) * 72;
+      const rectXPt = toInches(rect.x, options.paper.units) * 72;
       const rectYPt =
-        pageHeightPt - (toInches(rect.y) + placedHeightInches) * 72;
+        pageHeightPt -
+        (toInches(rect.y, options.paper.units) + placedHeightInches) * 72;
       const rectWidthPt = placedWidthInches * 72;
       const rectHeightPt = placedHeightInches * 72;
 
@@ -161,11 +232,9 @@ export async function downloadPdfFromCurrentLayout(
   }
 
   const bytes = await pdf.save();
-  const output = new Blob([bytes.buffer as ArrayBuffer], {
+  const output = new Blob([bytes.slice().buffer as ArrayBuffer], {
     type: "application/pdf",
   });
 
-  const url = URL.createObjectURL(output);
-
-  window.open(url, "_blank");
+  downloadBlob(output, "printable-photos.pdf");
 }

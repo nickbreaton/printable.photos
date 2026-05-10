@@ -9,14 +9,15 @@ import { Dialog } from "./components/Dialog";
 import { FileInput } from "./components/FileInput";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
+import { ImagePreview } from "./components/ImagePreview";
 import {
-  ImagePreview,
   computeInitialCrop,
   cropFromPercentages,
   getCropKey,
+  getImageViewBoxWidth,
   cropToPercentages,
   type CropRect,
-} from "./components/ImagePreview";
+} from "./crop";
 import {
   action,
   createMemo,
@@ -81,7 +82,7 @@ function getCroppedImageStyle(
   const crop = savedCrop
     ? cropFromPercentages(savedCrop, image.width, image.height)
     : computeInitialCrop(image.width, image.height, rect);
-  const viewBoxWidth = 100 * (image.width / image.height);
+  const viewBoxWidth = getImageViewBoxWidth(image.width, image.height);
 
   return {
     position: "absolute",
@@ -114,12 +115,6 @@ const selectedPaperPreset = createMemo(() => {
 
   return matchingPreset?.value ?? "Custom";
 });
-
-const Icon = (props: { icon: string; size?: number }) => {
-  return (
-    <span style={{ scale: props.size ?? 16 / 24 }} innerHTML={props.icon} />
-  );
-};
 
 const cardSurfaceClass =
   "bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10";
