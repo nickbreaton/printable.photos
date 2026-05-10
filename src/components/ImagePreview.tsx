@@ -1,4 +1,5 @@
 import {
+  createEffect,
   createMemo,
   createSignal,
   createUniqueId,
@@ -273,14 +274,23 @@ export function ImagePreview(props: {
   crop: CropRect;
   onCropChange: (crop: CropRect) => void;
 }) {
-  const imageUrl = createMemo(() => {
-    const url = URL.createObjectURL(snapshot(props.image).blob);
-    onCleanup(() => URL.revokeObjectURL(url));
-    return url;
-  });
-
   const cropAspectRatio = createMemo(() => {
     return getCropAspectRatio(props.currentCrop);
+  });
+
+  const previewImage = createMemo(() => {
+    const url = URL.createObjectURL(snapshot(props.image.blob));
+    onCleanup(() => URL.revokeObjectURL(url));
+
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        resolve(image);
+        URL.revokeObjectURL(url);
+      };
+      image.onerror = reject;
+      image.src = url;
+    });
   });
 
   const maskId = encodeURIComponent(createUniqueId());
@@ -427,6 +437,29 @@ export function ImagePreview(props: {
     window.addEventListener("pointerup", handleWindowPointerUp);
   }
 
+  function renderImage(source: () => HTMLImageElement) {
+    let canvas: HTMLCanvasElement | undefined;
+
+    createEffect(source, (image) => {
+      if (!canvas) return;
+
+      const width = image.naturalWidth || image.width;
+      const height = image.naturalHeight || image.height;
+      const context = canvas.getContext("2d");
+
+      if (!context) return;
+
+      canvas.width = width;
+      canvas.height = height;
+      context.clearRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+    });
+
+    return (el: HTMLCanvasElement) => {
+      canvas = el;
+    };
+  }
+
   function handleWindowPointerMove(e: PointerEvent) {
     const state = dragState();
     const svg = svgRef();
@@ -497,13 +530,23 @@ export function ImagePreview(props: {
           />
         </mask>
       </defs>
-      <image
-        href={imageUrl()}
-        width={viewBoxWidth()}
-        height={viewBoxHeight}
-        preserveAspectRatio="none"
-        mask={`url(#${maskId})`}
-      />
+      <g mask={`url(#${maskId})`}>
+        <foreignObject
+          x={0}
+          y={0}
+          width={viewBoxWidth()}
+          height={viewBoxHeight}
+        >
+          <canvas
+            ref={renderImage(previewImage)}
+            style={{
+              display: "block",
+              width: "100%",
+              height: "100%",
+            }}
+          />
+        </foreignObject>
+      </g>
       <rect
         x={props.crop.x}
         y={props.crop.y}
