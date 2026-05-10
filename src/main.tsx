@@ -2,6 +2,7 @@ import { render } from "@solidjs/web";
 import type { JSX } from "@solidjs/web";
 
 import "./style.css";
+import { Button } from "./components/Button";
 import { Checkbox } from "./components/Checkbox";
 import { downloadPdfFromCurrentLayout } from "./download";
 import { FieldLabel } from "./components/FieldLabel";
@@ -262,9 +263,8 @@ function Sidebar() {
           })}
         />
       </fieldset>
-      <button
+      <Button
         type="button"
-        class="border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
         disabled={downloading()}
         onClick={action(function* () {
           setDownloading(true);
@@ -276,7 +276,7 @@ function Sidebar() {
         })}
       >
         Download PDF
-      </button>
+      </Button>
     </aside>
   );
 }
@@ -381,13 +381,12 @@ function Pages() {
                         onCropChange={setCrop}
                         onCropDone={saveSelectedCrop}
                       />
-                      <button
+                      <Button
                         type="button"
-                        class="border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
                         onClick={saveSelectedCrop}
                       >
                         Done
-                      </button>
+                      </Button>
                     </>
                   )}
                 </Show>
