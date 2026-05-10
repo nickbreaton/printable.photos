@@ -1,6 +1,6 @@
 import {
-  createEffect,
   createMemo,
+  createRenderEffect,
   createSignal,
   createUniqueId,
   For,
@@ -157,7 +157,7 @@ interface DragState {
 function PreviewCanvas(props: { source: ImageBitmap }) {
   let canvas: HTMLCanvasElement | undefined;
 
-  createEffect(
+  createRenderEffect(
     () => props.source,
     (image) => {
       if (!canvas) return;
