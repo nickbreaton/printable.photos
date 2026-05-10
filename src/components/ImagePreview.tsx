@@ -278,7 +278,6 @@ export function ImagePreview(props: {
   });
 
   const maskId = encodeURIComponent(createUniqueId());
-  const imageAspectRatio = () => props.image.width / props.image.height;
   const viewBoxHeight = 100;
   const viewBoxWidth = createMemo(() => {
     return getImageViewBoxWidth(props.image.width, props.image.height);

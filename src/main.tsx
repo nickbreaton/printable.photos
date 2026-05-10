@@ -362,7 +362,7 @@ function Pages() {
     <>
       <Dialog
         ref={setDialogRef}
-        class="h-[calc(100dvh-2.5rem)] w-[calc(100vw-2.5rem)] max-w-fit grid-rows-[minmax(0,1fr)_auto]"
+        class="h-[calc(100dvh-2.5rem)] w-[calc(100vw-2.5rem)] max-w-fit grid-rows-[minmax(0,1fr)_auto_auto] gap-0"
         onClose={() => {
           setSelectedCrop();
           setCrop();
@@ -375,7 +375,7 @@ function Pages() {
                 <Show when={crop()}>
                   {(c) => (
                     <>
-                      <div class="grid min-h-0 min-w-0 place-items-center overflow-visible p-2">
+                      <div class="-mx-2 grid min-h-0 min-w-0 place-items-center overflow-visible p-2">
                         <ImagePreview
                           image={image()}
                           currentCrop={sc()}
@@ -383,6 +383,9 @@ function Pages() {
                           onCropChange={setCrop}
                           onCropDone={saveSelectedCrop}
                         />
+                      </div>
+                      <div class="py-6">
+                        <div class="border-t -mt-1" />
                       </div>
                       <div class="flex items-center justify-end gap-3">
                         <Button
