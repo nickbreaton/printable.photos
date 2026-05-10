@@ -11,7 +11,7 @@ import {
 import { MaxRectsPacker } from "maxrects-packer";
 
 import {
-  db,
+  database,
   type CropCoordinates,
   type ImageSettings,
   type PaperSettings,
@@ -25,7 +25,7 @@ const PREVIEW_DPI = 160;
 const MAX_PREVIEW_EDGE_PX = 1600;
 
 export const project = createProjection((): Promise<Project> => {
-  return db.table("projects").get("DEFAULT");
+  return database.table("projects").get("DEFAULT");
 }, {} as Project);
 
 export const paper = createMemo(() => {
@@ -37,7 +37,7 @@ export const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
     `settings.paper.${key}`,
     value,
   ]);
-  const promisish = db.table("projects").update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+  const promisish = database.table("projects").update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
   yield Promise.resolve(promisish);
   refresh(project);
 });
@@ -51,13 +51,13 @@ export const setImageConfig = action(function* (newImageConfig: Partial<ImageSet
     `settings.image.${key}`,
     value,
   ]);
-  const promisish = db.table("projects").update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+  const promisish = database.table("projects").update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
   yield Promise.resolve(promisish);
   refresh(project);
 });
 
 interface ImageRef extends ProjectImage {
-  url: string;
+  objectUrl: string;
 }
 
 export const projectImages = createProjection(async (): Promise<ProjectImage[]> => {
@@ -65,18 +65,18 @@ export const projectImages = createProjection(async (): Promise<ProjectImage[]> 
     return [];
   }
 
-  return db.images.where("projectId").equals(project.id).sortBy("order");
+  return database.images.where("projectId").equals(project.id).sortBy("order");
 }, []);
 
 export const images = mapArray(
   () => projectImages,
   (image): ImageRef => {
     const blob = snapshot(image().previewBlob ?? image().blob);
-    const blobUrl = URL.createObjectURL(blob);
+    const objectUrl = URL.createObjectURL(blob);
 
-    onCleanup(() => URL.revokeObjectURL(blobUrl));
+    onCleanup(() => URL.revokeObjectURL(objectUrl));
 
-    return merge(image, { url: blobUrl });
+    return merge(image, { objectUrl: objectUrl });
   },
   { keyed: (image) => image.id },
 );
@@ -99,7 +99,7 @@ export const addImages = action(function* (files: FileList) {
     const bitmap = yield createImageBitmap(snapshot(file));
     try {
       const previewBlob = yield createPreviewBlob(file, bitmap, maxPreviewEdgePx);
-      const now = Date.now();
+      const timestamp = Date.now();
 
       nextImages.push({
         id: crypto.randomUUID(),
@@ -112,8 +112,8 @@ export const addImages = action(function* (files: FileList) {
         blob: file,
         previewBlob,
         crops: {},
-        createdAt: now,
-        updatedAt: now,
+        createdAt: timestamp,
+        updatedAt: timestamp,
       });
     } finally {
       bitmap.close();
@@ -124,8 +124,8 @@ export const addImages = action(function* (files: FileList) {
     return;
   }
 
-  const promisish = db.transaction("rw", db.projects, db.images, async () => {
-    await db.images.bulkAdd(nextImages);
+  const promisish = database.transaction("rw", database.projects, database.images, async () => {
+    await database.images.bulkAdd(nextImages);
   });
   yield Promise.resolve(promisish);
   refresh(projectImages);
@@ -133,8 +133,8 @@ export const addImages = action(function* (files: FileList) {
 });
 
 export const deleteImage = action(function* (imageId: string) {
-  const promisish = db.transaction("rw", db.projects, db.images, async () => {
-    await db.images.delete(imageId);
+  const promisish = database.transaction("rw", database.projects, database.images, async () => {
+    await database.images.delete(imageId);
   });
   yield Promise.resolve(promisish);
   refresh(projectImages);
@@ -146,14 +146,14 @@ export const saveImageCrop = action(function* (
   cropKey: string,
   cropCoordinates: CropCoordinates,
 ) {
-  const promisish = db.transaction("rw", db.projects, db.images, async () => {
-    const image = await db.images.get(imageId);
+  const promisish = database.transaction("rw", database.projects, database.images, async () => {
+    const image = await database.images.get(imageId);
 
     if (!image) {
       return;
     }
 
-    await db.images.update(imageId, {
+    await database.images.update(imageId, {
       crops: {
         ...image.crops,
         [cropKey]: cropCoordinates,

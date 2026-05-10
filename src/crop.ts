@@ -33,15 +33,15 @@ export function computeInitialCrop(
   imageHeight: number,
   currentCrop: Rectangle,
 ): CropRect {
-  const imageAR = imageWidth / imageHeight;
-  const cropAR = getCropAspectRatio(currentCrop);
-  const vbw = getImageViewBoxWidth(imageWidth, imageHeight);
-  const widthPercent = Math.min(cropAR / imageAR, 1);
-  const heightPercent = Math.min(imageAR / cropAR, 1);
-  const width = widthPercent * vbw;
+  const imageAspectRatio = imageWidth / imageHeight;
+  const cropAspectRatio = getCropAspectRatio(currentCrop);
+  const viewBoxWidth = getImageViewBoxWidth(imageWidth, imageHeight);
+  const widthPercent = Math.min(cropAspectRatio / imageAspectRatio, 1);
+  const heightPercent = Math.min(imageAspectRatio / cropAspectRatio, 1);
+  const width = widthPercent * viewBoxWidth;
   const height = heightPercent * 100;
   return {
-    x: (vbw - width) / 2,
+    x: (viewBoxWidth - width) / 2,
     y: (100 - height) / 2,
     width,
     height,
@@ -53,11 +53,11 @@ export function cropToPercentages(
   imageWidth: number,
   imageHeight: number,
 ): CropPercentages {
-  const vbw = getImageViewBoxWidth(imageWidth, imageHeight);
+  const viewBoxWidth = getImageViewBoxWidth(imageWidth, imageHeight);
   return {
-    x: (crop.x / vbw) * 100,
+    x: (crop.x / viewBoxWidth) * 100,
     y: crop.y,
-    width: (crop.width / vbw) * 100,
+    width: (crop.width / viewBoxWidth) * 100,
     height: crop.height,
   };
 }
@@ -67,22 +67,22 @@ export function cropFromPercentages(
   imageWidth: number,
   imageHeight: number,
 ): CropRect {
-  const vbw = getImageViewBoxWidth(imageWidth, imageHeight);
+  const viewBoxWidth = getImageViewBoxWidth(imageWidth, imageHeight);
   return {
-    x: (crop.x / 100) * vbw,
+    x: (crop.x / 100) * viewBoxWidth,
     y: crop.y,
-    width: (crop.width / 100) * vbw,
+    width: (crop.width / 100) * viewBoxWidth,
     height: crop.height,
   };
 }
 
 export function cropToSourcePixels(crop: CropRect, imageWidth: number, imageHeight: number) {
-  const vbw = getImageViewBoxWidth(imageWidth, imageHeight);
+  const viewBoxWidth = getImageViewBoxWidth(imageWidth, imageHeight);
 
   return {
-    x: (crop.x / vbw) * imageWidth,
+    x: (crop.x / viewBoxWidth) * imageWidth,
     y: (crop.y / 100) * imageHeight,
-    width: (crop.width / vbw) * imageWidth,
+    width: (crop.width / viewBoxWidth) * imageWidth,
     height: (crop.height / 100) * imageHeight,
   };
 }

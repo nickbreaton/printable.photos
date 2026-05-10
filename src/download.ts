@@ -138,17 +138,17 @@ async function embedCanvas(
 }
 
 function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
+  const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
-  link.href = url;
+  link.href = objectUrl;
   link.download = filename;
   link.rel = "noopener";
   document.body.append(link);
   link.click();
   link.remove();
 
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
 }
 
 export async function downloadPdfFromCurrentLayout(options: DownloadPdfFromCurrentLayoutOptions) {
@@ -157,10 +157,10 @@ export async function downloadPdfFromCurrentLayout(options: DownloadPdfFromCurre
   const pageWidthPt = toInches(options.paper.width, options.paper.units) * 72;
   const pageHeightPt = toInches(options.paper.height, options.paper.units) * 72;
 
-  for (const bin of options.bins) {
+  for (const packedBin of options.bins) {
     const page = pdf.addPage([pageWidthPt, pageHeightPt]);
 
-    for (const rect of bin.rects) {
+    for (const rect of packedBin.rects) {
       const image = imagesById.get(rect.data.id);
 
       if (!image) {

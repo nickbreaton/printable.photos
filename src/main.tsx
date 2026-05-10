@@ -53,36 +53,39 @@ function toPercent(value: number, total: number) {
 }
 
 function getPhotoStyle(
-  rect: PackedImageRectangle,
+  packedRect: PackedImageRectangle,
   paper: { width: number; height: number },
 ): JSX.CSSProperties {
-  if (!rect.rot) {
+  if (!packedRect.rot) {
     return {
       position: "absolute",
-      top: toPercent(rect.y, paper.height),
-      left: toPercent(rect.x, paper.width),
-      width: toPercent(rect.width, paper.width),
-      height: toPercent(rect.height, paper.height),
+      top: toPercent(packedRect.y, paper.height),
+      left: toPercent(packedRect.x, paper.width),
+      width: toPercent(packedRect.width, paper.width),
+      height: toPercent(packedRect.height, paper.height),
     };
   }
 
   return {
     position: "absolute",
-    top: toPercent(rect.y + rect.height / 2, paper.height),
-    left: toPercent(rect.x + rect.width / 2, paper.width),
-    width: toPercent(rect.height, paper.width),
-    height: toPercent(rect.width, paper.height),
+    top: toPercent(packedRect.y + packedRect.height / 2, paper.height),
+    left: toPercent(packedRect.x + packedRect.width / 2, paper.width),
+    width: toPercent(packedRect.height, paper.width),
+    height: toPercent(packedRect.width, paper.height),
     transform: "translate(-50%, -50%) rotate(90deg)",
     "transform-origin": "center",
   };
 }
 
-function getCroppedImageStyle(image: ProjectImage, rect: PackedImageRectangle): JSX.CSSProperties {
-  const cropKey = getCropKey(rect);
+function getCroppedImageStyle(
+  image: ProjectImage,
+  packedRect: PackedImageRectangle,
+): JSX.CSSProperties {
+  const cropKey = getCropKey(packedRect);
   const savedCrop = image.crops?.[cropKey];
   const crop = savedCrop
     ? cropFromPercentages(savedCrop, image.width, image.height)
-    : computeInitialCrop(image.width, image.height, rect);
+    : computeInitialCrop(image.width, image.height, packedRect);
   const viewBoxWidth = getImageViewBoxWidth(image.width, image.height);
 
   return {
@@ -132,9 +135,9 @@ function Sidebar() {
           Paper
           <Select
             value={selectedPaperPreset()}
-            onChange={(e) => {
+            onChange={(event) => {
               const selectedPreset = ALL_PAPER_PRESETS.find(
-                (preset) => preset.value === e.target.value,
+                (preset) => preset.value === event.target.value,
               );
 
               if (!selectedPreset) {
@@ -165,7 +168,7 @@ function Sidebar() {
             type="number"
             step={1}
             value={paper().width}
-            onChange={(e) => setPaper({ width: e.target.valueAsNumber })}
+            onChange={(event) => setPaper({ width: event.target.valueAsNumber })}
           />
         </FieldLabel>
         <FieldLabel>
@@ -174,7 +177,7 @@ function Sidebar() {
             type="number"
             step={1}
             value={paper().height}
-            onChange={(e) => setPaper({ height: e.target.valueAsNumber })}
+            onChange={(event) => setPaper({ height: event.target.valueAsNumber })}
           />
         </FieldLabel>
         <FieldLabel>
@@ -183,7 +186,7 @@ function Sidebar() {
             type="number"
             step={0.25}
             value={paper().margin}
-            onChange={(e) => setPaper({ margin: e.target.valueAsNumber })}
+            onChange={(event) => setPaper({ margin: event.target.valueAsNumber })}
           />
         </FieldLabel>
         <FieldLabel>
@@ -192,14 +195,14 @@ function Sidebar() {
             type="number"
             step={0.25}
             value={paper().gap}
-            onChange={(e) => setPaper({ gap: e.target.valueAsNumber })}
+            onChange={(event) => setPaper({ gap: event.target.valueAsNumber })}
           />
         </FieldLabel>
         <FieldLabel>
           Units
           <Select
             value={paper().units}
-            onChange={(e) => setPaper({ units: e.target.value as PaperSettings["units"] })}
+            onChange={(event) => setPaper({ units: event.target.value as PaperSettings["units"] })}
             disabled={
               true /* keep as inches until doing something smart for keeping same size but different units on selection */
             }
@@ -211,7 +214,7 @@ function Sidebar() {
         <label class="flex items-center gap-2 text-sm font-medium">
           <Checkbox
             checked={paper().allowRotation}
-            onChange={(e) => setPaper({ allowRotation: e.target.checked })}
+            onChange={(event) => setPaper({ allowRotation: event.target.checked })}
           />
           Allow rotation
         </label>
@@ -221,7 +224,7 @@ function Sidebar() {
           Image shape
           <Select
             value={imageConfig().shape}
-            onChange={(e) => setImageConfig({ shape: e.target.value as ImageShape })}
+            onChange={(event) => setImageConfig({ shape: event.target.value as ImageShape })}
           >
             <option value="original">Original</option>
             <option value="square">Square</option>
@@ -233,7 +236,7 @@ function Sidebar() {
             type="number"
             step={1}
             value={imageConfig().width}
-            onChange={(e) => setImageConfig({ width: e.target.valueAsNumber })}
+            onChange={(event) => setImageConfig({ width: event.target.valueAsNumber })}
           />
         </FieldLabel>
       </fieldset>
@@ -275,21 +278,21 @@ function Sidebar() {
 }
 
 function AsyncImage(props: JSX.ImgHTMLAttributes<HTMLImageElement>) {
-  const src = createMemo(async () => {
+  const source = createMemo(async () => {
     return new Promise<string>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        resolve(img.src);
-        img.remove();
+      const imageElement = new Image();
+      imageElement.onload = () => {
+        resolve(imageElement.src);
+        imageElement.remove();
       };
-      img.onerror = reject;
-      if (props.src) img.src = props.src;
-      img.hidden = true;
-      document.head.append(img);
+      imageElement.onerror = reject;
+      if (props.src) imageElement.src = props.src;
+      imageElement.hidden = true;
+      document.head.append(imageElement);
     });
   });
 
-  return <img {...props} src={src()} />;
+  return <img {...props} src={source()} />;
 }
 
 function Pages() {
@@ -304,29 +307,33 @@ function Pages() {
     return projectImages.find((image) => image.id === imageId);
   });
 
-  function openCropDialog(sc: PackedImageRectangle) {
-    const img = projectImages.find((image) => image.id === sc.data.id);
+  function openCropDialog(selectedCropRectangle: PackedImageRectangle) {
+    const imageElement = projectImages.find((image) => image.id === selectedCropRectangle.data.id);
 
-    if (!img) return;
+    if (!imageElement) return;
 
-    const cropKey = getCropKey(sc);
-    const savedCrop = img.crops?.[cropKey];
+    const cropKey = getCropKey(selectedCropRectangle);
+    const savedCrop = imageElement.crops?.[cropKey];
     const nextCrop = savedCrop
-      ? cropFromPercentages(savedCrop, img.width, img.height)
-      : computeInitialCrop(img.width, img.height, sc);
+      ? cropFromPercentages(savedCrop, imageElement.width, imageElement.height)
+      : computeInitialCrop(imageElement.width, imageElement.height, selectedCropRectangle);
 
     setCrop(nextCrop);
-    setSelectedCrop(sc);
+    setSelectedCrop(selectedCropRectangle);
   }
 
   async function saveSelectedCrop() {
-    const sc = selectedCrop();
-    const c = crop();
+    const selectedCropRectangle = selectedCrop();
+    const currentCropValue = crop();
     const image = selectedImage();
 
-    if (!sc || !c || !image) return;
+    if (!selectedCropRectangle || !currentCropValue || !image) return;
 
-    await saveImageCrop(image.id, getCropKey(sc), cropToPercentages(c, image.width, image.height));
+    await saveImageCrop(
+      image.id,
+      getCropKey(selectedCropRectangle),
+      cropToPercentages(currentCropValue, image.width, image.height),
+    );
     await resolve(() => projectImages.find((image) => image.id));
     dialogRef()?.close();
   }
@@ -344,10 +351,10 @@ function Pages() {
 
   createEffect(
     () => {
-      const sc = selectedCrop();
+      const selectedCropRectangle = selectedCrop();
       const dialog = dialogRef();
 
-      if (!sc || !dialog) return undefined;
+      if (!selectedCropRectangle || !dialog) return undefined;
 
       return dialog;
     },
@@ -375,17 +382,17 @@ function Pages() {
         }}
       >
         <Show when={selectedCrop()}>
-          {(sc) => (
+          {(selectedCropRectangle) => (
             <Show when={selectedImage()}>
               {(image) => (
                 <Show when={crop()}>
-                  {(c) => (
+                  {(currentCropValue) => (
                     <>
                       <div class="-mx-2 grid min-h-0 min-w-0 place-items-center overflow-visible p-2">
                         <ImagePreview
                           image={image()}
-                          currentCrop={sc()}
-                          crop={c()}
+                          currentCrop={selectedCropRectangle()}
+                          crop={currentCropValue()}
                           onCropChange={setCrop}
                           onCropDone={saveSelectedCrop}
                         />
@@ -424,7 +431,7 @@ function Pages() {
       </Dialog>
       <div class="flex flex-col gap-5">
         <For each={bins}>
-          {(bin) => (
+          {(packedBin) => (
             <div
               class={`relative mx-auto w-full overflow-hidden min-w-3xs ${cardSurfaceClass}`}
               style={{
@@ -432,21 +439,21 @@ function Pages() {
                 "max-width": `${paper().width}${paper().units}`,
               }}
             >
-              <For each={bin().rects}>
-                {(rect) => (
+              <For each={packedBin().rects}>
+                {(packedRect) => (
                   <button
                     type="button"
                     class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:opacity-90 dark:hover:opacity-85 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
-                    style={getPhotoStyle(rect(), paper())}
+                    style={getPhotoStyle(packedRect(), paper())}
                     title="Open image dialog"
-                    onClick={() => openCropDialog(rect())}
+                    onClick={() => openCropDialog(packedRect())}
                   >
-                    <Show when={images().find((image) => image.id === rect().data.id)}>
+                    <Show when={images().find((image) => image.id === packedRect().data.id)}>
                       {(image) => (
                         <AsyncImage
                           class="block max-w-none visible [dynamic-range-limit:standard] select-none"
-                          style={getCroppedImageStyle(image(), rect())}
-                          src={image().url}
+                          style={getCroppedImageStyle(image(), packedRect())}
+                          src={image().objectUrl}
                           draggable="false"
                         />
                       )}
@@ -462,7 +469,7 @@ function Pages() {
   );
 }
 
-function App() {
+function RootApplication() {
   return (
     <>
       <Loading>
@@ -477,4 +484,4 @@ function App() {
   );
 }
 
-render(() => <App />, document.getElementById("root")!);
+render(() => <RootApplication />, document.getElementById("root")!);
