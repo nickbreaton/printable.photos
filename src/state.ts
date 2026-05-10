@@ -37,7 +37,9 @@ export const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
     `settings.paper.${key}`,
     value,
   ]);
-  const promisish = database.table("projects").update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+  const promisish = database
+    .table("projects")
+    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
   yield Promise.resolve(promisish);
   refresh(project);
 });
@@ -51,7 +53,9 @@ export const setImageConfig = action(function* (newImageConfig: Partial<ImageSet
     `settings.image.${key}`,
     value,
   ]);
-  const promisish = database.table("projects").update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+  const promisish = database
+    .table("projects")
+    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
   yield Promise.resolve(promisish);
   refresh(project);
 });
@@ -168,6 +172,7 @@ function packImages(imageList: ImageRef[], allowRotation: boolean): PackedImageB
   const packer = new MaxRectsPacker(paper().width, paper().height, paper().gap, {
     border: paper().margin,
     pot: false,
+    smart: false, // size can expand beyond paper bounds if `true` ¯\_(ツ)_/¯
     square: false,
     allowRotation,
   });
