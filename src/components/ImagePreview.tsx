@@ -34,6 +34,14 @@ const CROP_FRAME_HANDLES = [
   "bottom-left",
 ] as const;
 
+function isSafariBrowser() {
+  return (
+    navigator.vendor.includes("Apple") &&
+    /safari/i.test(navigator.userAgent) &&
+    !/chrome|chromium|crios|fxios|edgios|android/i.test(navigator.userAgent)
+  );
+}
+
 type CropFrameHandle = (typeof CROP_FRAME_HANDLES)[number];
 
 function getCropFrameHandleCursor(handle: CropFrameHandle) {
@@ -303,7 +311,7 @@ function constrainCrop(
 }
 
 export function ImagePreview(props: {
-  image: ProjectImage;
+  image: ProjectImage & { url?: string };
   currentCrop: Rectangle;
   crop: CropRect;
   onCropChange: (crop: CropRect) => void;
@@ -312,25 +320,22 @@ export function ImagePreview(props: {
     return getCropAspectRatio(props.currentCrop);
   });
 
-  const previewImage = createMemo(() => {
-    const promise = createImageBitmap(snapshot(props.image.blob));
-    let image: ImageBitmap | undefined;
-    let disposed = false;
+  const previewImage = createMemo(async () => {
+    let bitmap: ImageBitmap | undefined;
+    onCleanup(() => bitmap?.close());
+    bitmap = await createImageBitmap(snapshot(props.image.blob));
+    return bitmap;
+  });
 
-    promise.then((resolvedImage) => {
-      image = resolvedImage;
-
-      if (disposed) {
-        resolvedImage.close();
-      }
+  const previewUrl = createMemo(() => {
+    const url = URL.createObjectURL(snapshot(props.image.blob));
+    onCleanup(() => URL.revokeObjectURL(url));
+    return new Promise<string>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(url);
+      image.onerror = reject;
+      image.src = url;
     });
-
-    onCleanup(() => {
-      disposed = true;
-      image?.close();
-    });
-
-    return promise;
   });
 
   const maskId = encodeURIComponent(createUniqueId());
@@ -548,14 +553,25 @@ export function ImagePreview(props: {
         </mask>
       </defs>
       <g mask={`url(#${maskId})`}>
-        <foreignObject
-          x={0}
-          y={0}
-          width={viewBoxWidth()}
-          height={viewBoxHeight}
-        >
-          <PreviewCanvas source={previewImage()} />
-        </foreignObject>
+        {isSafariBrowser() ? (
+          <image
+            href={previewUrl()}
+            x={0}
+            y={0}
+            width={viewBoxWidth()}
+            height={viewBoxHeight}
+            preserveAspectRatio="none"
+          />
+        ) : (
+          <foreignObject
+            x={0}
+            y={0}
+            width={viewBoxWidth()}
+            height={viewBoxHeight}
+          >
+            <PreviewCanvas source={previewImage()} />
+          </foreignObject>
+        )}
       </g>
       <rect
         x={props.crop.x}
