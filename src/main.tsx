@@ -448,11 +448,18 @@ function Pages() {
           )}
         </Show>
       </Dialog>
-      <div class="flex flex-col gap-5">
+      <div
+        class="grid gap-5 justify-center"
+        style={{
+          "grid-template-columns":
+            bins.length > 1 ? `repeat(auto-fill, ${paper().width}${paper().units})` : "1fr",
+          "min-width": `${paper().width}${paper().units}`,
+        }}
+      >
         <For each={bins}>
           {(packedBin) => (
             <div
-              class={`relative mx-auto w-full overflow-hidden bg-[#444] min-w-3xs ${cardSurfaceClass}`}
+              class={`relative mx-auto w-full overflow-hidden min-w-3xs ${cardSurfaceClass}`}
               style={{
                 "aspect-ratio": paper().width / paper().height,
                 "max-width": `${paper().width}${paper().units}`,
