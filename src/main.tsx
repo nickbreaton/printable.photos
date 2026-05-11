@@ -199,19 +199,6 @@ function Sidebar() {
             onChange={(event) => setPaper({ gap: event.target.valueAsNumber })}
           />
         </FieldLabel>
-        <FieldLabel>
-          Units
-          <Select
-            value={paper().units}
-            onChange={(event) => setPaper({ units: event.target.value as PaperSettings["units"] })}
-            disabled={
-              true /* keep as inches until doing something smart for keeping same size but different units on selection */
-            }
-          >
-            <option value="in">Inches</option>
-            <option value="mm">Millimeters</option>
-          </Select>
-        </FieldLabel>
         <label class="flex items-center gap-2 text-sm font-medium">
           <Checkbox
             checked={paper().allowRotation}
