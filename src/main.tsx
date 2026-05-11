@@ -452,7 +452,7 @@ function Pages() {
         <For each={bins}>
           {(packedBin) => (
             <div
-              class={`relative mx-auto w-full overflow-hidden min-w-3xs ${cardSurfaceClass}`}
+              class={`relative mx-auto w-full overflow-hidden bg-[#444] min-w-3xs ${cardSurfaceClass}`}
               style={{
                 "aspect-ratio": paper().width / paper().height,
                 "max-width": `${paper().width}${paper().units}`,
@@ -470,7 +470,7 @@ function Pages() {
                     <Show when={images().find((image) => image.id === packedRect().data.id)}>
                       {(image) => (
                         <AsyncImage
-                          class="block max-w-none visible [dynamic-range-limit:standard] select-none"
+                          class="block max-w-none object-cover visible [dynamic-range-limit:standard] select-none"
                           style={getCroppedImageStyle(image(), packedRect())}
                           src={image().objectUrl}
                           draggable="false"
