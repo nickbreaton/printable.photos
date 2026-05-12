@@ -486,7 +486,7 @@ function RootApplication() {
   return (
     <>
       <Loading>
-        <div class="relative z-0 flex items-start gap-5">
+        <div class="relative z-0 flex items-start gap-5 p-5">
           <Sidebar />
           <main class="min-w-0 flex-1">
             <Pages />

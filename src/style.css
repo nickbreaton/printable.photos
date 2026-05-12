@@ -135,7 +135,8 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
     user-select: none;
+    background-color: light-dark(var(--muted), var(--background));
   }
 }
