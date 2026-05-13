@@ -121,7 +121,7 @@ const selectedPaperPreset = createMemo(() => {
   return matchingPreset?.value ?? "Custom";
 });
 
-const cardSurfaceClass = "bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10";
+const cardSurfaceClass = "bg-background text-card-foreground shadow-sm ring-1 ring-foreground/10";
 
 function Sidebar() {
   const [saving, setSaving] = createOptimistic(false);
@@ -434,7 +434,7 @@ function Pages() {
         </Show>
       </Dialog>
       <div
-        class="grid gap-5 justify-center p-5 overflow-y-auto h-full auto-rows-max [scrollbar-gutter:stable]"
+        class="grid gap-5 justify-center p-5 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
         style={{
           "grid-template-columns":
             bins.length > 1 ? `repeat(auto-fill, ${paper().width}${paper().units})` : "1fr",
@@ -484,14 +484,14 @@ function RootApplication() {
   return (
     <Loading>
       <header class="bg-background left-0 right-0 z-10">
-        <div class="flex justify-between">
+        <div class="flex justify-between h-10">
           <span>logo</span>
           <span>controls</span>
         </div>
       </header>
-      <div class="relative z-0 flex items-start h-full">
+      <div class="relative z-0 flex overflow-hidden">
         <Sidebar />
-        <main class="min-w-0 flex-1 h-full bg-muted">
+        <main class="flex-1 bg-muted flex">
           <Pages />
         </main>
       </div>
