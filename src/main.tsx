@@ -128,7 +128,7 @@ function Sidebar() {
   const [downloading, setDownloading] = createOptimistic(false);
 
   return (
-    <aside class="flex max-h-[calc(100vh-2.5rem)] w-72 shrink-0 flex-col gap-5 overflow-auto p-5">
+    <aside class="flex max-h-[calc(100vh-2.5rem)] w-80 shrink-0 flex-col gap-5 overflow-auto p-5 pt-0">
       <fieldset class="flex flex-col gap-3">
         <FieldLabel>
           Paper
@@ -483,8 +483,8 @@ function Pages() {
 function RootApplication() {
   return (
     <Loading>
-      <header class="bg-background left-0 right-0 z-10">
-        <div class="flex justify-between h-10">
+      <header class="px-8 py-3">
+        <div class="flex justify-between">
           <span>logo</span>
           <span>controls</span>
         </div>
