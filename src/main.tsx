@@ -13,7 +13,7 @@ import { Input } from "./components/Input";
 import { Select } from "./components/Select";
 import { ImagePreview } from "./components/ImagePreview";
 import { Icon } from "./components/Icon";
-import { Trash2 } from "lucide-static";
+import { FileSpreadsheet, Trash2 } from "lucide-static";
 import {
   computeInitialCrop,
   cropFromPercentages,
@@ -34,7 +34,7 @@ import {
   snapshot,
   resolve,
 } from "solid-js";
-import { type ImageShape, type PaperSettings, type ProjectImage } from "./data";
+import { type ImageShape, type ProjectImage } from "./data";
 import type { PackedImageRectangle } from "./layout";
 import {
   addImages,
@@ -121,16 +121,17 @@ const selectedPaperPreset = createMemo(() => {
   return matchingPreset?.value ?? "Custom";
 });
 
-const cardSurfaceClass = "bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10";
+const cardSurfaceClass = "bg-background text-card-foreground shadow-sm ring-1 ring-foreground/10";
+
+function pluralize(count: number, singular: string, plural: string) {
+  return count === 1 ? singular : plural;
+}
 
 function Sidebar() {
   const [saving, setSaving] = createOptimistic(false);
-  const [downloading, setDownloading] = createOptimistic(false);
 
   return (
-    <aside
-      class={`sticky top-5 flex max-h-[calc(100vh-2.5rem)] w-72 shrink-0 flex-col gap-5 overflow-auto p-5 ${cardSurfaceClass}`}
-    >
+    <aside class="flex max-h-[calc(100vh-2.5rem)] w-80 shrink-0 flex-col gap-5 overflow-auto p-5 pt-0">
       <fieldset class="flex flex-col gap-3">
         <FieldLabel>
           Paper
@@ -247,39 +248,49 @@ function Sidebar() {
           })}
         />
       </fieldset>
-      <div class="flex flex-col gap-2">
-        <Button
-          type="button"
-          class="min-w-0"
-          disabled={downloading()}
-          onClick={action(function* () {
-            setDownloading(true);
-            yield downloadPdfFromCurrentLayout({
-              bins: [...bins],
-              paper: paper(),
-              images: [...snapshot(projectImages)],
-            });
-          })}
-        >
-          Download PDF
-        </Button>
-        <Button
-          type="button"
-          class="min-w-0"
-          disabled={downloading()}
-          onClick={action(function* () {
-            setDownloading(true);
-            yield downloadPhotosFromCurrentLayout({
-              bins: [...bins],
-              paper: paper(),
-              images: [...snapshot(projectImages)],
-            });
-          })}
-        >
-          Download Photos
-        </Button>
-      </div>
     </aside>
+  );
+}
+
+function DownloadControls() {
+  const [downloading, setDownloading] = createOptimistic(false);
+
+  return (
+    <div class="flex items-center gap-2">
+      <span class="mr-2 text-sm font-medium tabular-nums text-foreground/70">
+        {bins.length} {pluralize(bins.length, "page", "pages")} / {projectImages.length}{" "}
+        {pluralize(projectImages.length, "photo", "photos")}
+      </span>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={downloading()}
+        onClick={action(function* () {
+          setDownloading(true);
+          yield downloadPhotosFromCurrentLayout({
+            bins: [...bins],
+            paper: paper(),
+            images: [...snapshot(projectImages)],
+          });
+        })}
+      >
+        Download Photos
+      </Button>
+      <Button
+        type="button"
+        disabled={downloading()}
+        onClick={action(function* () {
+          setDownloading(true);
+          yield downloadPdfFromCurrentLayout({
+            bins: [...bins],
+            paper: paper(),
+            images: [...snapshot(projectImages)],
+          });
+        })}
+      >
+        Download PDF
+      </Button>
+    </div>
   );
 }
 
@@ -436,7 +447,7 @@ function Pages() {
         </Show>
       </Dialog>
       <div
-        class="grid gap-5 justify-center"
+        class="grid gap-5 justify-center p-8 pr-5 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
         style={{
           "grid-template-columns":
             bins.length > 1 ? `repeat(auto-fill, ${paper().width}${paper().units})` : "1fr",
@@ -446,7 +457,7 @@ function Pages() {
         <For each={bins}>
           {(packedBin) => (
             <div
-              class={`relative mx-auto w-full overflow-hidden min-w-3xs ${cardSurfaceClass}`}
+              class={["relative mx-auto w-full overflow-hidden min-w-3xs", cardSurfaceClass]}
               style={{
                 "aspect-ratio": paper().width / paper().height,
                 "max-width": `${paper().width}${paper().units}`,
@@ -484,16 +495,23 @@ function Pages() {
 
 function RootApplication() {
   return (
-    <>
-      <Loading>
-        <div class="relative z-0 flex items-start gap-5 p-5">
-          <Sidebar />
-          <main class="min-w-0 flex-1">
-            <Pages />
-          </main>
+    <Loading>
+      <header class="px-5 py-3">
+        <div class="flex justify-between">
+          <span class="font-semibold tracking-tight text-xl flex gap-2 items-center">
+            <Icon icon={FileSpreadsheet} class="scale-150" />
+            printable.photos
+          </span>
+          <DownloadControls />
         </div>
-      </Loading>
-    </>
+      </header>
+      <div class="relative z-0 flex overflow-hidden">
+        <Sidebar />
+        <main class="flex-1 bg-muted flex border-l-[1px] border-t-[1px] border-foreground/13 inset-shadow-xs/[3%] rounded-tl-[0.75rem]">
+          <Pages />
+        </main>
+      </div>
+    </Loading>
   );
 }
 

@@ -1,0 +1,1 @@
+- Hook into Web MCP to allow an agent to upload photos and change layouts

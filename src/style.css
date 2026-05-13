@@ -137,6 +137,12 @@
   body {
     @apply text-foreground;
     user-select: none;
-    background-color: light-dark(var(--muted), var(--background));
+    background-color: var(--background);
+  }
+
+  html, body, #root {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
   }
 }
