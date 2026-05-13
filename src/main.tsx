@@ -34,7 +34,7 @@ import {
   snapshot,
   resolve,
 } from "solid-js";
-import { type ImageShape, type PaperSettings, type ProjectImage } from "./data";
+import { type ImageShape, type ProjectImage } from "./data";
 import type { PackedImageRectangle } from "./layout";
 import {
   addImages,
@@ -434,7 +434,7 @@ function Pages() {
         </Show>
       </Dialog>
       <div
-        class="grid gap-5 justify-center p-5 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
+        class="grid gap-5 justify-center p-8 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
         style={{
           "grid-template-columns":
             bins.length > 1 ? `repeat(auto-fill, ${paper().width}${paper().units})` : "1fr",
@@ -491,7 +491,7 @@ function RootApplication() {
       </header>
       <div class="relative z-0 flex overflow-hidden">
         <Sidebar />
-        <main class="flex-1 bg-muted flex">
+        <main class="flex-1 bg-muted flex border-l-[1px] border-t-[1px] border-foreground/13 inset-shadow-xs/[3%] rounded-tl-[0.75rem]">
           <Pages />
         </main>
       </div>
