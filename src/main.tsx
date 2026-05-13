@@ -128,9 +128,7 @@ function Sidebar() {
   const [downloading, setDownloading] = createOptimistic(false);
 
   return (
-    <aside
-      class={`sticky top-5 flex max-h-[calc(100vh-2.5rem)] w-72 shrink-0 flex-col gap-5 overflow-auto p-5 ${cardSurfaceClass}`}
-    >
+    <aside class="flex max-h-[calc(100vh-2.5rem)] w-72 shrink-0 flex-col gap-5 overflow-auto p-5">
       <fieldset class="flex flex-col gap-3">
         <FieldLabel>
           Paper
@@ -436,7 +434,7 @@ function Pages() {
         </Show>
       </Dialog>
       <div
-        class="grid gap-5 justify-center"
+        class="grid gap-5 justify-center p-5 overflow-y-auto h-full auto-rows-max [scrollbar-gutter:stable]"
         style={{
           "grid-template-columns":
             bins.length > 1 ? `repeat(auto-fill, ${paper().width}${paper().units})` : "1fr",
@@ -446,7 +444,7 @@ function Pages() {
         <For each={bins}>
           {(packedBin) => (
             <div
-              class={`relative mx-auto w-full overflow-hidden min-w-3xs ${cardSurfaceClass}`}
+              class={["relative mx-auto w-full overflow-hidden min-w-3xs", cardSurfaceClass]}
               style={{
                 "aspect-ratio": paper().width / paper().height,
                 "max-width": `${paper().width}${paper().units}`,
@@ -484,16 +482,20 @@ function Pages() {
 
 function RootApplication() {
   return (
-    <>
-      <Loading>
-        <div class="relative z-0 flex items-start gap-5 p-5">
-          <Sidebar />
-          <main class="min-w-0 flex-1">
-            <Pages />
-          </main>
+    <Loading>
+      <header class="bg-background left-0 right-0 z-10">
+        <div class="flex justify-between">
+          <span>logo</span>
+          <span>controls</span>
         </div>
-      </Loading>
-    </>
+      </header>
+      <div class="relative z-0 flex items-start h-full">
+        <Sidebar />
+        <main class="min-w-0 flex-1 h-full bg-muted">
+          <Pages />
+        </main>
+      </div>
+    </Loading>
   );
 }
 
