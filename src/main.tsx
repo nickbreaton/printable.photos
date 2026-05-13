@@ -123,9 +123,12 @@ const selectedPaperPreset = createMemo(() => {
 
 const cardSurfaceClass = "bg-background text-card-foreground shadow-sm ring-1 ring-foreground/10";
 
+function pluralize(count: number, singular: string, plural: string) {
+  return count === 1 ? singular : plural;
+}
+
 function Sidebar() {
   const [saving, setSaving] = createOptimistic(false);
-  const [downloading, setDownloading] = createOptimistic(false);
 
   return (
     <aside class="flex max-h-[calc(100vh-2.5rem)] w-80 shrink-0 flex-col gap-5 overflow-auto p-5 pt-0">
@@ -245,39 +248,49 @@ function Sidebar() {
           })}
         />
       </fieldset>
-      <div class="flex flex-col gap-2">
-        <Button
-          type="button"
-          class="min-w-0"
-          disabled={downloading()}
-          onClick={action(function* () {
-            setDownloading(true);
-            yield downloadPdfFromCurrentLayout({
-              bins: [...bins],
-              paper: paper(),
-              images: [...snapshot(projectImages)],
-            });
-          })}
-        >
-          Download PDF
-        </Button>
-        <Button
-          type="button"
-          class="min-w-0"
-          disabled={downloading()}
-          onClick={action(function* () {
-            setDownloading(true);
-            yield downloadPhotosFromCurrentLayout({
-              bins: [...bins],
-              paper: paper(),
-              images: [...snapshot(projectImages)],
-            });
-          })}
-        >
-          Download Photos
-        </Button>
-      </div>
     </aside>
+  );
+}
+
+function DownloadControls() {
+  const [downloading, setDownloading] = createOptimistic(false);
+
+  return (
+    <div class="flex items-center gap-2">
+      <span class="mr-2 text-sm font-medium tabular-nums text-foreground/70">
+        {bins.length} {pluralize(bins.length, "page", "pages")} / {projectImages.length}{" "}
+        {pluralize(projectImages.length, "photo", "photos")}
+      </span>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={downloading()}
+        onClick={action(function* () {
+          setDownloading(true);
+          yield downloadPhotosFromCurrentLayout({
+            bins: [...bins],
+            paper: paper(),
+            images: [...snapshot(projectImages)],
+          });
+        })}
+      >
+        Download Photos
+      </Button>
+      <Button
+        type="button"
+        disabled={downloading()}
+        onClick={action(function* () {
+          setDownloading(true);
+          yield downloadPdfFromCurrentLayout({
+            bins: [...bins],
+            paper: paper(),
+            images: [...snapshot(projectImages)],
+          });
+        })}
+      >
+        Download PDF
+      </Button>
+    </div>
   );
 }
 
@@ -434,7 +447,7 @@ function Pages() {
         </Show>
       </Dialog>
       <div
-        class="grid gap-5 justify-center p-8 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
+        class="grid gap-5 justify-center p-8 pr-5 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
         style={{
           "grid-template-columns":
             bins.length > 1 ? `repeat(auto-fill, ${paper().width}${paper().units})` : "1fr",
@@ -483,13 +496,13 @@ function Pages() {
 function RootApplication() {
   return (
     <Loading>
-      <header class="pe-8 ps-5 py-3">
+      <header class="px-5 py-3">
         <div class="flex justify-between">
           <span class="font-semibold tracking-tight text-xl flex gap-2 items-center">
             <Icon icon={FileSpreadsheet} class="scale-150" />
             printable.photos
           </span>
-          <span>controls</span>
+          <DownloadControls />
         </div>
       </header>
       <div class="relative z-0 flex overflow-hidden">
