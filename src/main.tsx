@@ -13,7 +13,7 @@ import { Input } from "./components/Input";
 import { Select } from "./components/Select";
 import { ImagePreview } from "./components/ImagePreview";
 import { Icon } from "./components/Icon";
-import { Trash2 } from "lucide-static";
+import { FileSpreadsheet, Trash2 } from "lucide-static";
 import {
   computeInitialCrop,
   cropFromPercentages,
@@ -483,9 +483,12 @@ function Pages() {
 function RootApplication() {
   return (
     <Loading>
-      <header class="px-8 py-3">
+      <header class="pe-8 ps-5 py-3">
         <div class="flex justify-between">
-          <span>logo</span>
+          <span class="font-semibold tracking-tight text-xl flex gap-2 items-center">
+            <Icon icon={FileSpreadsheet} class="scale-150" />
+            printable.photos
+          </span>
           <span>controls</span>
         </div>
       </header>
