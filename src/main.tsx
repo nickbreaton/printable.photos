@@ -467,7 +467,7 @@ function Pages() {
                 {(packedRect) => (
                   <button
                     type="button"
-                    class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:opacity-90 dark:hover:opacity-85 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
+                    class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:brightness-90 dark:hover:opacity-85 dark:hover:brightness-100 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
                     style={getPhotoStyle(packedRect(), paper())}
                     title="Open image dialog"
                     onClick={() => openCropDialog(packedRect())}
