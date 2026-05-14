@@ -140,7 +140,7 @@
     background-color: var(--background);
   }
 
-  html, body, #root {
+  html, body {
     position: fixed;
     inset: 0;
     overflow: hidden;

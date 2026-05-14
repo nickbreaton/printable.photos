@@ -496,21 +496,19 @@ function Pages() {
 function RootApplication() {
   return (
     <Loading>
-      <header class="px-5 py-3">
-        <div class="flex justify-between">
-          <span class="font-semibold tracking-tight text-xl flex gap-2 items-center">
-            <Icon icon={FileSpreadsheet} class="scale-150" />
-            printable.photos
-          </span>
+      <header class="px-5 py-3 grid grid-cols-subgrid col-span-2">
+        <span class="font-semibold tracking-tight text-xl flex gap-2 items-center">
+          <Icon icon={FileSpreadsheet} class="scale-150" />
+          printable.photos
+        </span>
+        <div class="justify-self-end">
           <DownloadControls />
         </div>
       </header>
-      <div class="relative z-0 flex overflow-hidden">
-        <Sidebar />
-        <main class="flex-1 bg-muted flex border-l-[1px] border-t-[1px] border-foreground/13 inset-shadow-xs/[3%] rounded-tl-[0.75rem]">
-          <Pages />
-        </main>
-      </div>
+      <Sidebar />
+      <main class="h-full contain-size bg-muted border-l-[1px] border-t-[1px] border-foreground/13 inset-shadow-xs/[3%] rounded-tl-[0.75rem]">
+        <Pages />
+      </main>
     </Loading>
   );
 }
