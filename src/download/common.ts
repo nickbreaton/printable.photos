@@ -3,7 +3,6 @@ import { database, type CropCoordinates } from "../data";
 import type { PackedImageRectangle } from "../layout";
 
 export const EXPORT_DPI = 300;
-export const JPEG_QUALITY = 0.94;
 
 export interface PaperLayout {
   width: number;

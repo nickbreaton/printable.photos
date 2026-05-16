@@ -4,7 +4,6 @@ import {
   downloadBlob,
   EXPORT_DPI,
   get2dContext,
-  JPEG_QUALITY,
   renderImageForRect,
   toArrayBuffer,
   toInches,
@@ -72,7 +71,7 @@ export async function downloadPhotosFromCurrentLayout(
             }
           },
           "image/jpeg",
-          JPEG_QUALITY,
+          1,
         );
       });
     }),

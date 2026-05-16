@@ -4,7 +4,6 @@ import {
   canvasToBlob,
   downloadBlob,
   EXPORT_DPI,
-  JPEG_QUALITY,
   renderImageForRect,
   toInches,
   type DownloadImage,
@@ -29,7 +28,7 @@ async function embedCanvas(
   const blob = await canvasToBlob(
     canvas,
     mimeType,
-    mimeType === "image/jpeg" ? JPEG_QUALITY : undefined,
+    mimeType === "image/jpeg" ? 1 : undefined,
   );
   const bytes = await blob.arrayBuffer();
 
