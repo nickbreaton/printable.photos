@@ -37,7 +37,7 @@ export interface CropCoordinates {
   height: number;
 }
 
-export interface ProjectImage {
+export interface StoredProjectImage {
   id: string;
   projectId: string;
   order: number;
@@ -45,11 +45,19 @@ export interface ProjectImage {
   type: string;
   width: number;
   height: number;
-  blob: Blob;
-  previewBlob?: Blob;
+  optimizedBlob?: Blob;
   crops: Record<string, CropCoordinates>;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface ProjectImage extends StoredProjectImage {
+  blob: Blob;
+}
+
+export interface OriginalProjectImage {
+  imageId: string;
+  blob: Blob;
 }
 
 export interface ProjectData {
@@ -86,7 +94,8 @@ export function createDefaultProject(): Project {
 
 class PrintablePhotosDatabase extends Dexie {
   projects!: EntityTable<Project, "id">;
-  images!: EntityTable<ProjectImage, "id">;
+  images!: EntityTable<StoredProjectImage, "id">;
+  originalImages!: EntityTable<OriginalProjectImage, "imageId">;
 
   constructor() {
     super("printablePhotos");
@@ -94,6 +103,7 @@ class PrintablePhotosDatabase extends Dexie {
     this.version(1).stores({
       projects: "id",
       images: "id, projectId, [projectId+order]",
+      originalImages: "imageId",
     });
 
     this.on("populate", (transaction) => {
@@ -108,8 +118,12 @@ class PrintablePhotosDatabase extends Dexie {
       return { updatedAt: Date.now() };
     });
 
-    this.projects.hook("deleting", (primaryKey, _project, transaction) => {
-      return transaction.table("images").where("projectId").equals(primaryKey).delete();
+    this.projects.hook("deleting", async (primaryKey, _project, transaction) => {
+      const images = await transaction.table("images").where("projectId").equals(primaryKey).toArray();
+      const imageIds = images.map((image) => image.id);
+
+      await transaction.table("originalImages").bulkDelete(imageIds);
+      await transaction.table("images").where("projectId").equals(primaryKey).delete();
     });
 
     const touchProject = (projectId: string, transaction: Transaction) => {
@@ -129,8 +143,9 @@ class PrintablePhotosDatabase extends Dexie {
       return { updatedAt: Date.now() };
     });
 
-    this.images.hook("deleting", (_primaryKey, image, transaction) => {
-      return touchProject(image.projectId, transaction);
+    this.images.hook("deleting", async (primaryKey, image, transaction) => {
+      await transaction.table("originalImages").delete(primaryKey);
+      await touchProject(image.projectId, transaction);
     });
   }
 }

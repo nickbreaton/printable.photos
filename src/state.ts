@@ -17,12 +17,13 @@ import {
   type PaperSettings,
   type Project,
   type ProjectImage,
+  type OriginalProjectImage,
+  type StoredProjectImage,
 } from "./data";
 import type { PackedImageBin } from "./layout";
-import { createPreviewBlob } from "./utils";
+import { createImportImageBlobs } from "./imageResize";
 
-const PREVIEW_DPI = 160;
-const MAX_PREVIEW_EDGE_PX = 1600;
+const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
 
 export const project = createProjection((): Promise<Project> => {
   return database.table("projects").get("DEFAULT");
@@ -69,13 +70,26 @@ export const projectImages = createProjection(async (): Promise<ProjectImage[]> 
     return [];
   }
 
-  return database.images.where("projectId").equals(project.id).sortBy("order");
+  const images = await database.images.where("projectId").equals(project.id).sortBy("order");
+  const projectImages = await Promise.all(
+    images.map(async (image): Promise<ProjectImage | undefined> => {
+      const originalImage = image.optimizedBlob
+        ? undefined
+        : await database.originalImages.get(image.id);
+
+      const blob = image.optimizedBlob ?? originalImage?.blob;
+
+      return blob ? merge(image, { blob }) : undefined;
+    }),
+  );
+
+  return projectImages.filter((image): image is ProjectImage => Boolean(image));
 }, []);
 
 export const images = mapArray(
   () => projectImages,
   (image): ImageRef => {
-    const blob = snapshot(image().previewBlob ?? image().blob);
+    const blob = snapshot(image().blob);
     const objectUrl = URL.createObjectURL(blob);
 
     onCleanup(() => URL.revokeObjectURL(objectUrl));
@@ -85,61 +99,135 @@ export const images = mapArray(
   { keyed: (image) => image.id },
 );
 
+function createByteLimiter(maxBytes: number) {
+  let activeBytes = 0;
+  const queue: Array<{
+    bytes: number;
+    run: () => void;
+  }> = [];
+
+  function flushQueue() {
+    const next = queue[0];
+
+    if (!next || (activeBytes > 0 && activeBytes + next.bytes > maxBytes)) {
+      return;
+    }
+
+    queue.shift();
+    activeBytes += next.bytes;
+    next.run();
+    flushQueue();
+  }
+
+  return async function limitByBytes<T>(bytes: number, task: () => Promise<T>): Promise<T> {
+    const reservedBytes = Math.min(bytes, maxBytes);
+
+    await new Promise<void>((resolve) => {
+      queue.push({ bytes: reservedBytes, run: resolve });
+      flushQueue();
+    });
+
+    try {
+      return await task();
+    } finally {
+      activeBytes -= reservedBytes;
+      flushQueue();
+    }
+  };
+}
+
+interface ImportedImage {
+  image: StoredProjectImage;
+  originalImage: OriginalProjectImage;
+}
+
+async function createProjectImageFromFile(options: {
+  file: File;
+  projectId: string;
+  order: number;
+}): Promise<ImportedImage> {
+  const bitmap = await createImageBitmap(snapshot(options.file));
+
+  try {
+    const imageBlobs = await createImportImageBlobs({
+      blob: options.file,
+      bitmap,
+    });
+    const timestamp = Date.now();
+    const imageId = crypto.randomUUID();
+
+    return {
+      image: {
+        id: imageId,
+        projectId: options.projectId,
+        order: options.order,
+        name: options.file.name,
+        type: options.file.type,
+        width: imageBlobs.optimizedDimensions.width,
+        height: imageBlobs.optimizedDimensions.height,
+        optimizedBlob: imageBlobs.optimizedBlob,
+        crops: {},
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+      originalImage: { imageId, blob: options.file },
+    };
+  } finally {
+    bitmap.close();
+  }
+}
+
 export const addImages = action(function* (files: FileList) {
-  const nextImages: ProjectImage[] = [];
   const currentProjectId = snapshot(project.id);
   const currentImages = snapshot(projectImages);
   const nextOrder =
     currentImages.reduce((maxOrder: number, image: ProjectImage) => {
       return Math.max(maxOrder, image.order);
     }, -1) + 1;
-  const paperMaxInches =
-    paper().units === "mm"
-      ? Math.max(paper().width, paper().height) / 25.4
-      : Math.max(paper().width, paper().height);
-  const maxPreviewEdgePx = Math.min(MAX_PREVIEW_EDGE_PX, Math.ceil(paperMaxInches * PREVIEW_DPI));
+  const limitByBytes = createByteLimiter(MAX_IMPORT_BYTES);
+  const importedImages = (yield Promise.all(
+    Array.from(files, (file, index) =>
+      limitByBytes(file.size, () =>
+        createProjectImageFromFile({
+          file,
+          projectId: currentProjectId,
+          order: nextOrder + index,
+        }),
+      ),
+    ),
+  )) as ImportedImage[];
 
-  for (const file of files) {
-    const bitmap = yield createImageBitmap(snapshot(file));
-    try {
-      const previewBlob = yield createPreviewBlob(file, bitmap, maxPreviewEdgePx);
-      const timestamp = Date.now();
-
-      nextImages.push({
-        id: crypto.randomUUID(),
-        projectId: currentProjectId,
-        order: nextOrder + nextImages.length,
-        name: file.name,
-        type: file.type,
-        width: bitmap.width,
-        height: bitmap.height,
-        blob: file,
-        previewBlob,
-        crops: {},
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
-    } finally {
-      bitmap.close();
-    }
-  }
-
-  if (nextImages.length === 0) {
+  if (importedImages.length === 0) {
     return;
   }
 
-  const promisish = database.transaction("rw", database.projects, database.images, async () => {
-    await database.images.bulkAdd(nextImages);
-  });
+  const promisish = database.transaction(
+    "rw",
+    database.projects,
+    database.images,
+    database.originalImages,
+    async () => {
+      await database.images.bulkAdd(importedImages.map((importedImage) => importedImage.image));
+      await database.originalImages.bulkAdd(
+        importedImages.map((importedImage) => importedImage.originalImage),
+      );
+    },
+  );
   yield Promise.resolve(promisish);
   refresh(projectImages);
   refresh(project);
 });
 
 export const deleteImage = action(function* (imageId: string) {
-  const promisish = database.transaction("rw", database.projects, database.images, async () => {
-    await database.images.delete(imageId);
-  });
+  const promisish = database.transaction(
+    "rw",
+    database.projects,
+    database.images,
+    database.originalImages,
+    async () => {
+      await database.images.delete(imageId);
+    },
+  );
   yield Promise.resolve(promisish);
   refresh(projectImages);
   refresh(project);

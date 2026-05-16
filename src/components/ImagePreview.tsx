@@ -235,7 +235,10 @@ export function ImagePreview(props: {
   const previewImage = createMemo(async () => {
     let bitmap: ImageBitmap | undefined;
     onCleanup(() => bitmap?.close());
-    bitmap = await createImageBitmap(snapshot(props.image.blob));
+
+    const image = snapshot(props.image);
+
+    bitmap = await createImageBitmap(image.blob);
     return bitmap;
   });
 
