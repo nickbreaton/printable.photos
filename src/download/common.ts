@@ -1,11 +1,9 @@
-import picaFactory from "pica";
 import { computeInitialCrop, cropFromPercentages, cropToSourcePixels, getCropKey } from "../crop";
 import { database, type CropCoordinates } from "../data";
 import type { PackedImageRectangle } from "../layout";
 
 export const EXPORT_DPI = 300;
 export const JPEG_QUALITY = 0.94;
-export const pica = picaFactory();
 
 export interface PaperLayout {
   width: number;
@@ -133,6 +131,22 @@ export async function renderImageForRect(
   } finally {
     sourceBitmap.close();
   }
+}
+
+export function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Failed to encode canvas"));
+        }
+      },
+      type,
+      quality,
+    );
+  });
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

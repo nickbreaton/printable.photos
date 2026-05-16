@@ -1,10 +1,10 @@
 import { PDFDocument } from "pdf-lib";
 import type { PackedImageBin } from "../layout";
 import {
+  canvasToBlob,
   downloadBlob,
   EXPORT_DPI,
   JPEG_QUALITY,
-  pica,
   renderImageForRect,
   toInches,
   type DownloadImage,
@@ -26,7 +26,7 @@ async function embedCanvas(
   canvas: HTMLCanvasElement,
   mimeType: "image/jpeg" | "image/png",
 ) {
-  const blob = await pica.toBlob(
+  const blob = await canvasToBlob(
     canvas,
     mimeType,
     mimeType === "image/jpeg" ? JPEG_QUALITY : undefined,
