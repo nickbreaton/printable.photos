@@ -38,6 +38,32 @@ function getPlacedCrop(
     : computeInitialCrop(source.width, source.height, rect);
 }
 
+function getSourceCropBounds(
+  image: DownloadImage,
+  rect: PackedImageRectangle,
+  source: { width: number; height: number },
+) {
+  const crop = getPlacedCrop(image, rect, source);
+  const sourceCrop = cropToSourcePixels(crop, source.width, source.height);
+  const cropX = Math.max(0, Math.min(source.width - 1, Math.round(sourceCrop.x)));
+  const cropY = Math.max(0, Math.min(source.height - 1, Math.round(sourceCrop.y)));
+  const cropWidth = Math.max(1, Math.min(source.width - cropX, Math.round(sourceCrop.width)));
+  const cropHeight = Math.max(1, Math.min(source.height - cropY, Math.round(sourceCrop.height)));
+
+  return { cropX, cropY, cropWidth, cropHeight };
+}
+
+function imageMeetsExportDpi(
+  image: DownloadImage,
+  rect: PackedImageRectangle,
+  preRotationWidth: number,
+  preRotationHeight: number,
+) {
+  const crop = getSourceCropBounds(image, rect, image);
+
+  return crop.cropWidth >= preRotationWidth && crop.cropHeight >= preRotationHeight;
+}
+
 export function createCanvas(width: number, height: number) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -61,24 +87,15 @@ export async function renderImageForRect(
   targetWidthPx: number,
   targetHeightPx: number,
 ) {
-  const originalImage = await database.originalImages.get(image.id);
-  const sourceBitmap = await createImageBitmap(originalImage?.blob ?? image.blob);
+  const preRotationWidth = rect.rot ? targetHeightPx : targetWidthPx;
+  const preRotationHeight = rect.rot ? targetWidthPx : targetHeightPx;
+  const sourceBlob = imageMeetsExportDpi(image, rect, preRotationWidth, preRotationHeight)
+    ? image.blob
+    : (await database.originalImages.get(image.id))?.blob ?? image.blob;
+  const sourceBitmap = await createImageBitmap(sourceBlob);
 
   try {
-    const crop = getPlacedCrop(image, rect, sourceBitmap);
-    const sourceCrop = cropToSourcePixels(crop, sourceBitmap.width, sourceBitmap.height);
-    const cropX = Math.max(0, Math.min(sourceBitmap.width - 1, Math.round(sourceCrop.x)));
-    const cropY = Math.max(0, Math.min(sourceBitmap.height - 1, Math.round(sourceCrop.y)));
-    const cropWidth = Math.max(
-      1,
-      Math.min(sourceBitmap.width - cropX, Math.round(sourceCrop.width)),
-    );
-    const cropHeight = Math.max(
-      1,
-      Math.min(sourceBitmap.height - cropY, Math.round(sourceCrop.height)),
-    );
-    const preRotationWidth = rect.rot ? targetHeightPx : targetWidthPx;
-    const preRotationHeight = rect.rot ? targetWidthPx : targetHeightPx;
+    const { cropX, cropY, cropWidth, cropHeight } = getSourceCropBounds(image, rect, sourceBitmap);
     const fittedBitmap = await createImageBitmap(
       sourceBitmap,
       cropX,
