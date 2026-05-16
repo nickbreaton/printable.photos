@@ -1,6 +1,6 @@
 import picaFactory from "pica";
 import { computeInitialCrop, cropFromPercentages, cropToSourcePixels, getCropKey } from "../crop";
-import type { CropCoordinates } from "../data";
+import { database, type CropCoordinates } from "../data";
 import type { PackedImageRectangle } from "../layout";
 
 export const EXPORT_DPI = 300;
@@ -26,12 +26,16 @@ export function toInches(value: number, units: PaperLayout["units"]) {
   return units === "mm" ? value / 25.4 : value;
 }
 
-function getPlacedCrop(image: DownloadImage, rect: PackedImageRectangle) {
+function getPlacedCrop(
+  image: DownloadImage,
+  rect: PackedImageRectangle,
+  source: { width: number; height: number },
+) {
   const savedCrop = image.crops?.[getCropKey(rect)];
 
   return savedCrop
-    ? cropFromPercentages(savedCrop, image.width, image.height)
-    : computeInitialCrop(image.width, image.height, rect);
+    ? cropFromPercentages(savedCrop, source.width, source.height)
+    : computeInitialCrop(source.width, source.height, rect);
 }
 
 export function createCanvas(width: number, height: number) {
@@ -56,66 +60,59 @@ export async function renderImageForRect(
   rect: PackedImageRectangle,
   targetWidthPx: number,
   targetHeightPx: number,
-  resize: "pica" | "canvas" = "pica",
 ) {
-  const sourceBitmap = await createImageBitmap(image.blob);
+  const originalImage = await database.originalImages.get(image.id);
+  const sourceBitmap = await createImageBitmap(originalImage?.blob ?? image.blob);
 
   try {
-    const crop = getPlacedCrop(image, rect);
-    const sourceCrop = cropToSourcePixels(crop, image.width, image.height);
-    const cropX = Math.max(0, Math.min(image.width - 1, sourceCrop.x));
-    const cropY = Math.max(0, Math.min(image.height - 1, sourceCrop.y));
-    const cropWidth = Math.max(1, Math.min(image.width - cropX, sourceCrop.width));
-    const cropHeight = Math.max(1, Math.min(image.height - cropY, sourceCrop.height));
+    const crop = getPlacedCrop(image, rect, sourceBitmap);
+    const sourceCrop = cropToSourcePixels(crop, sourceBitmap.width, sourceBitmap.height);
+    const cropX = Math.max(0, Math.min(sourceBitmap.width - 1, Math.round(sourceCrop.x)));
+    const cropY = Math.max(0, Math.min(sourceBitmap.height - 1, Math.round(sourceCrop.y)));
+    const cropWidth = Math.max(
+      1,
+      Math.min(sourceBitmap.width - cropX, Math.round(sourceCrop.width)),
+    );
+    const cropHeight = Math.max(
+      1,
+      Math.min(sourceBitmap.height - cropY, Math.round(sourceCrop.height)),
+    );
     const preRotationWidth = rect.rot ? targetHeightPx : targetWidthPx;
     const preRotationHeight = rect.rot ? targetWidthPx : targetHeightPx;
-    const croppedCanvas = createCanvas(
-      Math.max(1, Math.round(cropWidth)),
-      Math.max(1, Math.round(cropHeight)),
-    );
-    const croppedContext = get2dContext(croppedCanvas, "Failed to create cropped canvas context");
-
-    croppedContext.drawImage(
+    const fittedBitmap = await createImageBitmap(
       sourceBitmap,
       cropX,
       cropY,
       cropWidth,
       cropHeight,
-      0,
-      0,
-      croppedCanvas.width,
-      croppedCanvas.height,
+      {
+        resizeWidth: preRotationWidth,
+        resizeHeight: preRotationHeight,
+        resizeQuality: "high",
+      },
     );
 
-    const fittedCanvas = createCanvas(preRotationWidth, preRotationHeight);
-
-    if (resize === "pica") {
-      await pica.resize(croppedCanvas, fittedCanvas, {
-        quality: 3,
-        unsharpAmount: 80,
-        unsharpRadius: 0.6,
-        unsharpThreshold: 2,
-      });
-    } else {
+    try {
+      const fittedCanvas = createCanvas(preRotationWidth, preRotationHeight);
       const fittedContext = get2dContext(fittedCanvas, "Failed to create fitted canvas context");
 
-      fittedContext.imageSmoothingEnabled = true;
-      fittedContext.imageSmoothingQuality = "high";
-      fittedContext.drawImage(croppedCanvas, 0, 0, fittedCanvas.width, fittedCanvas.height);
+      fittedContext.drawImage(fittedBitmap, 0, 0, fittedCanvas.width, fittedCanvas.height);
+
+      if (!rect.rot) {
+        return fittedCanvas;
+      }
+
+      const rotatedCanvas = createCanvas(targetWidthPx, targetHeightPx);
+      const rotatedContext = get2dContext(rotatedCanvas, "Failed to create rotated canvas context");
+
+      rotatedContext.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+      rotatedContext.rotate(Math.PI / 2);
+      rotatedContext.drawImage(fittedCanvas, -fittedCanvas.width / 2, -fittedCanvas.height / 2);
+
+      return rotatedCanvas;
+    } finally {
+      fittedBitmap.close();
     }
-
-    if (!rect.rot) {
-      return fittedCanvas;
-    }
-
-    const rotatedCanvas = createCanvas(targetWidthPx, targetHeightPx);
-    const rotatedContext = get2dContext(rotatedCanvas, "Failed to create rotated canvas context");
-
-    rotatedContext.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
-    rotatedContext.rotate(Math.PI / 2);
-    rotatedContext.drawImage(fittedCanvas, -fittedCanvas.width / 2, -fittedCanvas.height / 2);
-
-    return rotatedCanvas;
   } finally {
     sourceBitmap.close();
   }

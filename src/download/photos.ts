@@ -44,13 +44,7 @@ async function renderPageCanvas(
     const placedHeightInches = toInches(rect.height, paper.units);
     const targetWidthPx = Math.max(1, Math.ceil(placedWidthInches * EXPORT_DPI));
     const targetHeightPx = Math.max(1, Math.ceil(placedHeightInches * EXPORT_DPI));
-    const imageCanvas = await renderImageForRect(
-      image,
-      rect,
-      targetWidthPx,
-      targetHeightPx,
-      "canvas",
-    );
+    const imageCanvas = await renderImageForRect(image, rect, targetWidthPx, targetHeightPx);
     const rectXPx = Math.round(toInches(rect.x, paper.units) * EXPORT_DPI);
     const rectYPx = Math.round(toInches(rect.y, paper.units) * EXPORT_DPI);
 
