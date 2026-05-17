@@ -14,7 +14,7 @@ import { Input } from "./components/Input";
 import { Select } from "./components/Select";
 import { ImagePreview } from "./components/ImagePreview";
 import { Icon } from "./components/Icon";
-import { FileSpreadsheet, Plus, Trash2 } from "lucide-static";
+import { FileSpreadsheet, Plus, Settings, Trash2 } from "lucide-static";
 import {
   computeInitialCrop,
   cropFromPercentages,
@@ -268,26 +268,37 @@ function HeaderProjectDropdown() {
   );
 
   return (
-    <Dropdown
-      options={options()}
-      actions={[
-        {
-          icon: Plus,
-          label: "Create new project",
-          onClick: () => {
-            const name = prompt("Project name");
+    <div class="flex items-center gap-2">
+      <Dropdown
+        options={options()}
+        actions={[
+          {
+            icon: Plus,
+            label: "Create new project",
+            onClick: () => {
+              const name = prompt("Project name");
 
-            if (!name) {
-              return;
-            }
+              if (!name) {
+                return;
+              }
 
-            createProject(name);
+              createProject(name);
+            },
           },
-        },
-      ]}
-      value={projectId()}
-      onSelect={(id) => selectProject(id)}
-    />
+        ]}
+        value={projectId()}
+        onSelect={(id) => selectProject(id)}
+      />
+      <Button
+        type="button"
+        variant="secondary"
+        activeTransform={false}
+        class="min-w-0 w-9 px-0"
+        aria-label="Project settings"
+      >
+        <Icon icon={Settings} />
+      </Button>
+    </div>
   );
 }
 
