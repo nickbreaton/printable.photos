@@ -67,6 +67,19 @@ export const createProject = action(function* (name: string) {
   refresh(projects);
 });
 
+export const renameProject = action(function* (id: string, name: string) {
+  const promisish = database.projects.update(id, { name });
+  yield Promise.resolve(promisish);
+  refresh(projects);
+});
+
+export const deleteProject = action(function* (id: string) {
+  const promisish = database.projects.delete(id);
+  yield Promise.resolve(promisish);
+  refresh(projectImages);
+  refresh(projects);
+});
+
 export const project = createMemo(() => {
   return projects.find((project) => project.id === projectId())!;
 });

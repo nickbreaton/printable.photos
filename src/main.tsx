@@ -34,7 +34,6 @@ import {
   createEffect,
   snapshot,
   resolve,
-  mapArray,
 } from "solid-js";
 import { type ImageShape, type ProjectImage } from "./data";
 import type { PackedImageRectangle } from "./layout";
@@ -49,6 +48,8 @@ import {
   projects,
   createProject,
   deleteImage,
+  deleteProject,
+  renameProject,
   saveImageCrop,
   setImageConfig,
   setPaper,
@@ -260,11 +261,108 @@ function Sidebar() {
   );
 }
 
+function ProjectSettingsDialog(props: {
+  ref: (element: HTMLDialogElement) => void;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [name, setName] = createSignal("");
+  const canDeleteProject = createMemo(() => projects.length > 1);
+  let nameInput: HTMLInputElement | undefined;
+
+  createEffect(
+    () => (props.open ? project().name : undefined),
+    (projectName) => {
+      if (projectName === undefined) return;
+
+      setName(projectName);
+      queueMicrotask(() => {
+        nameInput?.focus();
+        nameInput?.select();
+      });
+    },
+  );
+
+  async function saveProjectName() {
+    const nextName = name().trim();
+
+    if (!nextName) return;
+
+    await renameProject(project().id, nextName);
+    props.onClose();
+  }
+
+  async function deleteCurrentProject() {
+    if (!canDeleteProject()) return;
+    if (!window.confirm(`Delete “${project().name}”? This cannot be undone.`)) return;
+
+    await deleteProject(project().id);
+    props.onClose();
+  }
+
+  return (
+    <Dialog ref={props.ref} class="w-[calc(100vw-2.5rem)] max-w-md" onClose={props.onClose}>
+      <form
+        class="grid gap-6"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void saveProjectName();
+        }}
+      >
+        <div class="min-h-32">
+          <FieldLabel>
+            Project name
+            <Input
+              ref={(element) => {
+                nameInput = element;
+              }}
+              value={name()}
+              autofocus
+              onInput={(event) => setName(event.currentTarget.value)}
+            />
+          </FieldLabel>
+        </div>
+        <div class="flex items-center justify-end gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            class="mr-auto gap-2"
+            disabled={!canDeleteProject()}
+            onClick={deleteCurrentProject}
+          >
+            <Icon icon={Trash2} />
+            Delete project
+          </Button>
+          <Button type="button" variant="secondary" onClick={props.onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!name().trim()}>
+            Rename
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
 function HeaderProjectDropdown() {
-  const options = mapArray(
-    () => projects,
-    (project) => ({ label: project().name, value: project().id }),
-    { keyed: (project) => project.id },
+  const [settingsDialogRef, setSettingsDialogRef] = createSignal<HTMLDialogElement>();
+  const [settingsOpen, setSettingsOpen] = createSignal(false);
+  const options = createMemo(() => {
+    return projects.map((project) => ({ label: project.name, value: project.id }));
+  });
+
+  createEffect(
+    () => {
+      if (!settingsOpen()) return undefined;
+
+      return settingsDialogRef();
+    },
+    (dialog) => {
+      if (!dialog || dialog.open) return;
+
+      dialog.showModal();
+    },
   );
 
   return (
@@ -295,9 +393,18 @@ function HeaderProjectDropdown() {
         activeTransform={false}
         class="min-w-0 w-9 px-0"
         aria-label="Project settings"
+        onClick={() => setSettingsOpen(true)}
       >
         <Icon icon={Settings} />
       </Button>
+      <ProjectSettingsDialog
+        ref={setSettingsDialogRef}
+        open={settingsOpen()}
+        onClose={() => {
+          setSettingsOpen(false);
+          if (settingsDialogRef()?.open) settingsDialogRef()?.close();
+        }}
+      />
     </div>
   );
 }
