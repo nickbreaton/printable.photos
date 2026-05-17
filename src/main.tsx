@@ -14,7 +14,7 @@ import { Input } from "./components/Input";
 import { Select } from "./components/Select";
 import { ImagePreview } from "./components/ImagePreview";
 import { Icon } from "./components/Icon";
-import { FileSpreadsheet, Trash2 } from "lucide-static";
+import { FileSpreadsheet, Plus, Trash2 } from "lucide-static";
 import {
   computeInitialCrop,
   cropFromPercentages,
@@ -254,15 +254,26 @@ function Sidebar() {
   );
 }
 
-const PROJECT_OPTIONS = [
-  { label: "New project", value: "new-project" },
-  { label: "Duplicate project", value: "duplicate-project" },
-];
-
 function HeaderProjectDropdown() {
   const [projectAction, setProjectAction] = createSignal("new-project");
 
-  return <Dropdown options={PROJECT_OPTIONS} value={projectAction()} onSelect={setProjectAction} />;
+  return (
+    <Dropdown
+      options={[
+        { label: "New project", value: "new-project" },
+        { label: "Duplicate project", value: "duplicate-project" },
+      ]}
+      actions={[
+        {
+          icon: Plus,
+          label: "Create new project",
+          onClick: () => {},
+        },
+      ]}
+      value={projectAction()}
+      onSelect={setProjectAction}
+    />
+  );
 }
 
 function DownloadControls() {
