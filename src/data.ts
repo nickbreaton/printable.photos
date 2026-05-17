@@ -1,6 +1,8 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { Transaction } from "dexie";
 
+import { applyMigrations } from "./migrations";
+
 export interface PaperSettings {
   width: number;
   height: number;
@@ -102,26 +104,7 @@ class PrintablePhotosDatabase extends Dexie {
   constructor() {
     super("printablePhotos");
 
-    this.version(1).stores({
-      projects: "id",
-      images: "id, projectId, [projectId+order]",
-      originalImages: "imageId",
-    });
-
-    this.version(2)
-      .stores({
-        projects: "id, lastSelectedAt",
-        images: "id, projectId, [projectId+order]",
-        originalImages: "imageId",
-      })
-      .upgrade(async (transaction) => {
-        await transaction
-          .table<Project>("projects")
-          .toCollection()
-          .modify((project) => {
-            project.lastSelectedAt ??= project.createdAt;
-          });
-      });
+    applyMigrations(this);
 
     this.on("populate", (transaction) => {
       void transaction.table("projects").add(createDefaultProject());
