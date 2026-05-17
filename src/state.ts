@@ -65,9 +65,9 @@ export const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
   ]);
   const promisish = database
     .table("projects")
-    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+    .update(projectId(), Object.fromEntries(nestedUpdateEntries));
   yield Promise.resolve(promisish);
-  refresh(project);
+  refresh(projects);
 });
 
 export const imageConfig = createMemo(() => {
@@ -81,9 +81,9 @@ export const setImageConfig = action(function* (newImageConfig: Partial<ImageSet
   ]);
   const promisish = database
     .table("projects")
-    .update("DEFAULT", Object.fromEntries(nestedUpdateEntries));
+    .update(projectId(), Object.fromEntries(nestedUpdateEntries));
   yield Promise.resolve(promisish);
-  refresh(project);
+  refresh(projects);
 });
 
 interface ImageRef extends ProjectImage {
@@ -240,7 +240,7 @@ export const addImages = action(function* (files: FileList) {
   );
   yield Promise.resolve(promisish);
   refresh(projectImages);
-  refresh(project);
+  refresh(projects);
 });
 
 export const deleteImage = action(function* (imageId: string) {
@@ -255,7 +255,7 @@ export const deleteImage = action(function* (imageId: string) {
   );
   yield Promise.resolve(promisish);
   refresh(projectImages);
-  refresh(project);
+  refresh(projects);
 });
 
 export const saveImageCrop = action(function* (
