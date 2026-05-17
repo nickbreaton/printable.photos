@@ -1,0 +1,2 @@
+- Logic getting messy, lets rewrite core logic in Effect
+- Validation on inputs somehow (larger images than page, prevent negative values, etc.)
