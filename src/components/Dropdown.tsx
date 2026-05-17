@@ -30,7 +30,6 @@ export function Dropdown(props: DropdownProps) {
 
   return (
     <div class="relative inline-flex">
-      {props.value}
       <button
         type="button"
         popovertarget={popoverId}

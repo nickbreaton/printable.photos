@@ -50,12 +50,12 @@ export const createProject = action(function* (name: string) {
   refresh(projects);
 });
 
-export const project = createProjection(() => {
+export const project = createMemo(() => {
   return projects.find((project) => project.id === projectId())!;
-}, {} as Project);
+});
 
 export const paper = createMemo(() => {
-  return project.settings.paper;
+  return project().settings.paper;
 });
 
 export const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
@@ -71,7 +71,7 @@ export const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
 });
 
 export const imageConfig = createMemo(() => {
-  return project.settings.image;
+  return project().settings.image;
 });
 
 export const setImageConfig = action(function* (newImageConfig: Partial<ImageSettings>) {
@@ -91,11 +91,11 @@ interface ImageRef extends ProjectImage {
 }
 
 export const projectImages = createProjection(async (): Promise<ProjectImage[]> => {
-  if (!project.id) {
+  if (!project().id) {
     return [];
   }
 
-  const images = await database.images.where("projectId").equals(project.id).sortBy("order");
+  const images = await database.images.where("projectId").equals(project().id).sortBy("order");
   const projectImages = await Promise.all(
     images.map(async (image): Promise<ProjectImage | undefined> => {
       const originalImage = image.optimizedBlob
@@ -203,7 +203,7 @@ async function createProjectImageFromFile(options: {
 }
 
 export const addImages = action(function* (files: FileList) {
-  const currentProjectId = snapshot(project.id);
+  const currentProjectId = snapshot(project().id);
   const currentImages = snapshot(projectImages);
   const nextOrder =
     currentImages.reduce((maxOrder: number, image: ProjectImage) => {
