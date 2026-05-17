@@ -8,6 +8,7 @@ import { downloadPdfFromCurrentLayout } from "./download/pdf";
 import { downloadPhotosFromCurrentLayout } from "./download/photos";
 import { FieldLabel } from "./components/FieldLabel";
 import { Dialog } from "./components/Dialog";
+import { Dropdown } from "./components/Dropdown";
 import { FileInput } from "./components/FileInput";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
@@ -251,6 +252,17 @@ function Sidebar() {
       </fieldset>
     </aside>
   );
+}
+
+const PROJECT_OPTIONS = [
+  { label: "New project", value: "new-project" },
+  { label: "Duplicate project", value: "duplicate-project" },
+];
+
+function HeaderProjectDropdown() {
+  const [projectAction, setProjectAction] = createSignal("new-project");
+
+  return <Dropdown options={PROJECT_OPTIONS} value={projectAction()} onSelect={setProjectAction} />;
 }
 
 function DownloadControls() {
@@ -503,7 +515,8 @@ function RootApplication() {
           <Icon icon={FileSpreadsheet} class="scale-150" />
           printable.photos
         </span>
-        <div class="justify-self-end">
+        <div class="flex items-center justify-between gap-3">
+          <HeaderProjectDropdown />
           <DownloadControls />
         </div>
       </header>
