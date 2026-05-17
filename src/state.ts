@@ -13,6 +13,7 @@ import { MaxRectsPacker } from "maxrects-packer";
 
 import {
   database,
+  DEFAULT_PROJECT_SETTINGS,
   type CropCoordinates,
   type ImageSettings,
   type PaperSettings,
@@ -32,8 +33,25 @@ export const projects = createProjection((): Promise<Project[]> => {
 
 export const [projectId, setProjectId] = createSignal("DEFAULT");
 
-export const project = createProjection((): Promise<Project> => {
-  return database.table("projects").get(projectId());
+export const createProject = action(function* (name: string) {
+  const id = crypto.randomUUID();
+  const timestamp = Date.now();
+
+  const promisish = database.projects.add({
+    id,
+    name,
+    settings: structuredClone(DEFAULT_PROJECT_SETTINGS),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+  yield Promise.resolve(promisish);
+
+  setProjectId(id);
+  refresh(projects);
+});
+
+export const project = createProjection(() => {
+  return projects.find((project) => project.id === projectId())!;
 }, {} as Project);
 
 export const paper = createMemo(() => {

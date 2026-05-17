@@ -46,6 +46,7 @@ import {
   paper,
   projectImages,
   projects,
+  createProject,
   deleteImage,
   saveImageCrop,
   setImageConfig,
@@ -262,6 +263,7 @@ function HeaderProjectDropdown() {
   const options = mapArray(
     () => projects,
     (project) => ({ label: project().name, value: project().id }),
+    { keyed: (project) => project.id },
   );
 
   return (
@@ -271,7 +273,15 @@ function HeaderProjectDropdown() {
         {
           icon: Plus,
           label: "Create new project",
-          onClick: () => {},
+          onClick: () => {
+            const name = prompt("Project name");
+
+            if (!name) {
+              return;
+            }
+
+            createProject(name);
+          },
         },
       ]}
       value={projectId()}
