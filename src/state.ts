@@ -2,7 +2,6 @@ import {
   action,
   createMemo,
   createProjection,
-  createSignal,
   mapArray,
   merge,
   onCleanup,
@@ -31,7 +30,25 @@ export const projects = createProjection((): Promise<Project[]> => {
   return Promise.resolve(database.table("projects").toArray());
 }, []);
 
-export const [projectId, setProjectId] = createSignal("DEFAULT");
+export const projectId = createMemo(() => {
+  let selectedProject = projects[0];
+
+  for (const candidateProject of projects) {
+    if (!selectedProject || candidateProject.lastSelectedAt > selectedProject.lastSelectedAt) {
+      selectedProject = candidateProject;
+    }
+  }
+
+  return selectedProject?.id ?? "DEFAULT";
+});
+
+export const selectProject = action(function* (id: string) {
+  const promisish = database.projects.update(id, {
+    lastSelectedAt: Date.now(),
+  });
+  yield Promise.resolve(promisish);
+  refresh(projects);
+});
 
 export const createProject = action(function* (name: string) {
   const id = crypto.randomUUID();
@@ -43,10 +60,10 @@ export const createProject = action(function* (name: string) {
     settings: structuredClone(DEFAULT_PROJECT_SETTINGS),
     createdAt: timestamp,
     updatedAt: timestamp,
+    lastSelectedAt: timestamp,
   });
   yield Promise.resolve(promisish);
 
-  setProjectId(id);
   refresh(projects);
 });
 

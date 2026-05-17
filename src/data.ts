@@ -28,6 +28,7 @@ export interface Project {
   settings: ProjectSettings;
   createdAt: number;
   updatedAt: number;
+  lastSelectedAt: number;
 }
 
 export interface CropCoordinates {
@@ -89,6 +90,7 @@ export function createDefaultProject(): Project {
     settings: structuredClone(DEFAULT_PROJECT_SETTINGS),
     createdAt: timestamp,
     updatedAt: timestamp,
+    lastSelectedAt: timestamp,
   };
 }
 
@@ -105,6 +107,21 @@ class PrintablePhotosDatabase extends Dexie {
       images: "id, projectId, [projectId+order]",
       originalImages: "imageId",
     });
+
+    this.version(2)
+      .stores({
+        projects: "id, lastSelectedAt",
+        images: "id, projectId, [projectId+order]",
+        originalImages: "imageId",
+      })
+      .upgrade(async (transaction) => {
+        await transaction
+          .table<Project>("projects")
+          .toCollection()
+          .modify((project) => {
+            project.lastSelectedAt ??= project.createdAt;
+          });
+      });
 
     this.on("populate", (transaction) => {
       void transaction.table("projects").add(createDefaultProject());

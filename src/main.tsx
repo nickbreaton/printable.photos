@@ -52,7 +52,7 @@ import {
   setImageConfig,
   setPaper,
   projectId,
-  setProjectId,
+  selectProject,
 } from "./state";
 import { Fonts } from "./components/Fonts";
 
@@ -285,7 +285,7 @@ function HeaderProjectDropdown() {
         },
       ]}
       value={projectId()}
-      onSelect={(id) => setProjectId(id)}
+      onSelect={(id) => selectProject(id)}
     />
   );
 }
