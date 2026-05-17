@@ -34,6 +34,7 @@ import {
   createEffect,
   snapshot,
   resolve,
+  mapArray,
 } from "solid-js";
 import { type ImageShape, type ProjectImage } from "./data";
 import type { PackedImageRectangle } from "./layout";
@@ -44,10 +45,13 @@ import {
   images,
   paper,
   projectImages,
+  projects,
   deleteImage,
   saveImageCrop,
   setImageConfig,
   setPaper,
+  projectId,
+  setProjectId,
 } from "./state";
 import { Fonts } from "./components/Fonts";
 
@@ -255,14 +259,14 @@ function Sidebar() {
 }
 
 function HeaderProjectDropdown() {
-  const [projectAction, setProjectAction] = createSignal("new-project");
+  const options = mapArray(
+    () => projects,
+    (project) => ({ label: project().name, value: project().id }),
+  );
 
   return (
     <Dropdown
-      options={[
-        { label: "New project", value: "new-project" },
-        { label: "Duplicate project", value: "duplicate-project" },
-      ]}
+      options={options()}
       actions={[
         {
           icon: Plus,
@@ -270,8 +274,8 @@ function HeaderProjectDropdown() {
           onClick: () => {},
         },
       ]}
-      value={projectAction()}
-      onSelect={setProjectAction}
+      value={projectId()}
+      onSelect={(id) => setProjectId(id)}
     />
   );
 }

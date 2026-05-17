@@ -2,6 +2,7 @@ import {
   action,
   createMemo,
   createProjection,
+  createSignal,
   mapArray,
   merge,
   onCleanup,
@@ -25,8 +26,14 @@ import { createImportImageBlobs } from "./imageResize";
 
 const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
 
+export const projects = createProjection((): Promise<Project[]> => {
+  return Promise.resolve(database.table("projects").toArray());
+}, []);
+
+export const [projectId, setProjectId] = createSignal("DEFAULT");
+
 export const project = createProjection((): Promise<Project> => {
-  return database.table("projects").get("DEFAULT");
+  return database.table("projects").get(projectId());
 }, {} as Project);
 
 export const paper = createMemo(() => {
