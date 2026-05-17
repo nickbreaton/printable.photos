@@ -508,7 +508,7 @@ function RootApplication() {
         </div>
       </header>
       <Sidebar />
-      <main class="h-full contain-size bg-muted border-l-[1px] border-t-[1px] border-foreground/13 inset-shadow-xs/[3%] rounded-tl-[0.75rem]">
+      <main class="h-full contain-size bg-muted border-l-[1px] border-t-[1px] border-foreground/13 inset-shadow-xs/[3%] ">
         <Pages />
       </main>
     </Loading>
