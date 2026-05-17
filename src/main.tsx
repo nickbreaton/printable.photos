@@ -266,22 +266,8 @@ function ProjectSettingsDialog(props: {
   open: boolean;
   onClose: () => void;
 }) {
-  const [name, setName] = createSignal("");
+  const [name, setName] = createSignal(() => project().name);
   const canDeleteProject = createMemo(() => projects.length > 1);
-  let nameInput: HTMLInputElement | undefined;
-
-  createEffect(
-    () => (props.open ? project().name : undefined),
-    (projectName) => {
-      if (projectName === undefined) return;
-
-      setName(projectName);
-      queueMicrotask(() => {
-        nameInput?.focus();
-        nameInput?.select();
-      });
-    },
-  );
 
   async function saveProjectName() {
     const nextName = name().trim();
@@ -313,9 +299,6 @@ function ProjectSettingsDialog(props: {
           <FieldLabel>
             Project name
             <Input
-              ref={(element) => {
-                nameInput = element;
-              }}
               value={name()}
               autofocus
               onInput={(event) => setName(event.currentTarget.value)}
