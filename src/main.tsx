@@ -162,9 +162,9 @@ function Sidebar() {
             <option value="Custom">Custom</option>
             <For each={Object.entries(PAPER_PRESETS)}>
               {(group) => (
-                <optgroup label={group()[0]}>
-                  <For each={group()[1]}>
-                    {(preset) => <option value={preset().value}>{preset().label}</option>}
+                <optgroup label={group[0]}>
+                  <For each={group[1]}>
+                    {(preset) => <option value={preset.value}>{preset.label}</option>}
                   </For>
                 </optgroup>
               )}
@@ -501,20 +501,20 @@ function Pages() {
                 "max-width": `${paper().width}${paper().units}`,
               }}
             >
-              <For each={packedBin().rects}>
+              <For each={packedBin.rects}>
                 {(packedRect) => (
                   <button
                     type="button"
                     class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:brightness-90 dark:hover:opacity-85 dark:hover:brightness-100 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
-                    style={getPhotoStyle(packedRect(), paper())}
+                    style={getPhotoStyle(packedRect, paper())}
                     title="Open image dialog"
-                    onClick={() => openCropDialog(packedRect())}
+                    onClick={() => openCropDialog(packedRect)}
                   >
-                    <Show when={images().find((image) => image.id === packedRect().data.id)}>
+                    <Show when={images().find((image) => image.id === packedRect.data.id)}>
                       {(image) => (
                         <AsyncImage
                           class="block max-w-none object-cover visible [dynamic-range-limit:standard] select-none"
-                          style={getCroppedImageStyle(image(), packedRect())}
+                          style={getCroppedImageStyle(image(), packedRect)}
                           src={image().objectUrl}
                           draggable="false"
                         />

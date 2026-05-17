@@ -56,10 +56,10 @@ export function Dropdown(props: DropdownProps) {
               popovertarget={popoverId}
               popovertargetaction="hide"
               class="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left text-sm outline-none transition-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground"
-              onClick={() => props.onSelect(option().value)}
+              onClick={() => props.onSelect(option.value)}
             >
-              <span>{option().label}</span>
-              {option().value === props.value && <Icon icon={Check} />}
+              <span>{option.label}</span>
+              {option.value === props.value && <Icon icon={Check} />}
             </button>
           )}
         </For>
@@ -72,10 +72,10 @@ export function Dropdown(props: DropdownProps) {
                 popovertarget={popoverId}
                 popovertargetaction="hide"
                 class="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-sm outline-none transition-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground"
-                onClick={() => action().onClick()}
+                onClick={() => action.onClick()}
               >
-                <Icon icon={action().icon} />
-                <span>{action().label}</span>
+                <Icon icon={action.icon} />
+                <span>{action.label}</span>
               </button>
             )}
           </For>

@@ -636,8 +636,8 @@ export function ImagePreview(props: {
       {/* Visible grabbers. */}
       <For each={CROP_FRAME_HANDLES}>
         {(handle) => {
-          const isCorner = () => handle().includes("-");
-          return <div style={isCorner() ? getCornerGrabber(handle()) : getSideGrabber(handle())} />;
+          const isCorner = () => handle.includes("-");
+          return <div style={isCorner() ? getCornerGrabber(handle) : getSideGrabber(handle)} />;
         }}
       </For>
 
@@ -659,9 +659,9 @@ export function ImagePreview(props: {
       <For each={CROP_FRAME_HANDLES}>
         {(handle) => (
           <div
-            class={getCropFrameHandleCursor(handle())}
-            style={getHitTargetStyle(handle())}
-            onPointerDown={(event) => handlePointerDown(event, handle())}
+            class={getCropFrameHandleCursor(handle)}
+            style={getHitTargetStyle(handle)}
+            onPointerDown={(event) => handlePointerDown(event, handle)}
           />
         )}
       </For>
