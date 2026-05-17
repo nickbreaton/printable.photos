@@ -48,6 +48,7 @@ import {
   setImageConfig,
   setPaper,
 } from "./state";
+import { Fonts } from "./components/Fonts";
 
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
@@ -496,6 +497,7 @@ function Pages() {
 function RootApplication() {
   return (
     <Loading>
+      <Fonts />
       <header class="px-5 py-3 grid grid-cols-subgrid col-span-2">
         <span class="font-semibold tracking-tight text-xl flex gap-2 items-center">
           <Icon icon={FileSpreadsheet} class="scale-150" />
