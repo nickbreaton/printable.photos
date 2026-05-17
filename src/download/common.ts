@@ -148,6 +148,16 @@ export function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: 
   });
 }
 
+export function getDownloadFilename(projectName: string, extension: string) {
+  const safeName = projectName
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/^[.\s-]+|[.\s-]+$/g, "");
+
+  return `${safeName || "printable-photos"}.${extension}`;
+}
+
 export function downloadBlob(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");

@@ -3,6 +3,7 @@ import type { PackedImageBin } from "../layout";
 import {
   downloadBlob,
   EXPORT_DPI,
+  getDownloadFilename,
   get2dContext,
   renderImageForRect,
   toArrayBuffer,
@@ -15,6 +16,7 @@ interface DownloadPhotosFromCurrentLayoutOptions {
   bins: PackedImageBin[];
   paper: PaperLayout;
   images: DownloadImage[];
+  projectName: string;
 }
 
 async function renderPageCanvas(
@@ -89,5 +91,5 @@ export async function downloadPhotosFromCurrentLayout(
   const zipped = zipSync(files, { level: 0 });
   const output = new Blob([toArrayBuffer(zipped)], { type: "application/zip" });
 
-  downloadBlob(output, "printable-photos.zip");
+  downloadBlob(output, getDownloadFilename(options.projectName, "zip"));
 }

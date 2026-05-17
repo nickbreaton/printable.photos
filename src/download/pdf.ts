@@ -4,6 +4,7 @@ import {
   canvasToBlob,
   downloadBlob,
   EXPORT_DPI,
+  getDownloadFilename,
   renderImageForRect,
   toInches,
   type DownloadImage,
@@ -14,6 +15,7 @@ interface DownloadPdfFromCurrentLayoutOptions {
   bins: PackedImageBin[];
   paper: PaperLayout;
   images: DownloadImage[];
+  projectName: string;
 }
 
 function getOutputMimeType(image: DownloadImage) {
@@ -77,5 +79,5 @@ export async function downloadPdfFromCurrentLayout(options: DownloadPdfFromCurre
     type: "application/pdf",
   });
 
-  downloadBlob(output, "printable-photos.pdf");
+  downloadBlob(output, getDownloadFilename(options.projectName, "pdf"));
 }

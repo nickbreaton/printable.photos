@@ -44,6 +44,7 @@ import {
   imageConfig,
   images,
   paper,
+  project,
   projectImages,
   projects,
   createProject,
@@ -309,6 +310,7 @@ function DownloadControls() {
             bins: [...bins],
             paper: paper(),
             images: [...snapshot(projectImages)],
+            projectName: project().name,
           });
         })}
       >
@@ -323,6 +325,7 @@ function DownloadControls() {
             bins: [...bins],
             paper: paper(),
             images: [...snapshot(projectImages)],
+            projectName: project().name,
           });
         })}
       >
