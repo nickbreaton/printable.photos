@@ -28,13 +28,6 @@ export function Dropdown(props: DropdownProps) {
     return props.options.find((option) => option.value === props.value);
   });
 
-  function closePopover() {
-    const popover = document.getElementById(popoverId) as HTMLElement & {
-      hidePopover?: () => void;
-    };
-    popover.hidePopover?.();
-  }
-
   return (
     <div class="relative inline-flex">
       <button
@@ -60,11 +53,10 @@ export function Dropdown(props: DropdownProps) {
           {(option) => (
             <button
               type="button"
+              popovertarget={popoverId}
+              popovertargetaction="hide"
               class="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left text-sm outline-none transition-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground"
-              onClick={() => {
-                props.onSelect(option().value);
-                closePopover();
-              }}
+              onClick={() => props.onSelect(option().value)}
             >
               <span>{option().label}</span>
               {option().value === props.value && <Icon icon={Check} />}
@@ -77,11 +69,10 @@ export function Dropdown(props: DropdownProps) {
             {(action) => (
               <button
                 type="button"
+                popovertarget={popoverId}
+                popovertargetaction="hide"
                 class="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-sm outline-none transition-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground"
-                onClick={() => {
-                  action().onClick();
-                  closePopover();
-                }}
+                onClick={() => action().onClick()}
               >
                 <Icon icon={action().icon} />
                 <span>{action().label}</span>
