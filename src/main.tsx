@@ -614,7 +614,7 @@ function Pages() {
                     type="button"
                     class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:brightness-90 dark:hover:opacity-85 dark:hover:brightness-100 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
                     style={getPhotoStyle(packedRect, paper())}
-                    title="Open image dialog"
+                    title="Edit image crop"
                     onClick={() => openCropDialog(packedRect)}
                   >
                     <Show when={images().find((image) => image.id === packedRect.data.id)}>
