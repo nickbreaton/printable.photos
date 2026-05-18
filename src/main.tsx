@@ -264,9 +264,12 @@ function Sidebar() {
 function ProjectSettingsDialog(props: {
   ref: (element: HTMLDialogElement) => void;
   open: boolean;
+  mode: "create" | "settings";
   onClose: () => void;
 }) {
-  const [name, setName] = createSignal(() => project().name);
+  const [name, setName] = createSignal(() =>
+    props.mode === "create" ? "" : project().name,
+  );
   const canDeleteProject = createMemo(() => projects.length > 1);
 
   async function saveProjectName() {
@@ -274,7 +277,12 @@ function ProjectSettingsDialog(props: {
 
     if (!nextName) return;
 
-    await renameProject(project().id, nextName);
+    if (props.mode === "create") {
+      await createProject(nextName);
+    } else {
+      await renameProject(project().id, nextName);
+    }
+
     props.onClose();
   }
 
@@ -306,21 +314,23 @@ function ProjectSettingsDialog(props: {
           </FieldLabel>
         </div>
         <div class="flex items-center justify-end gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            class="mr-auto gap-2"
-            disabled={!canDeleteProject()}
-            onClick={deleteCurrentProject}
-          >
-            <Icon icon={Trash2} />
-            Delete project
-          </Button>
+          <Show when={props.mode === "settings"}>
+            <Button
+              type="button"
+              variant="secondary"
+              class="mr-auto gap-2"
+              disabled={!canDeleteProject()}
+              onClick={deleteCurrentProject}
+            >
+              <Icon icon={Trash2} />
+              Delete project
+            </Button>
+          </Show>
           <Button type="button" variant="secondary" onClick={props.onClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={!name().trim()}>
-            Rename
+            {props.mode === "create" ? "Create" : "Rename"}
           </Button>
         </div>
       </form>
@@ -330,14 +340,14 @@ function ProjectSettingsDialog(props: {
 
 function HeaderProjectDropdown() {
   const [settingsDialogRef, setSettingsDialogRef] = createSignal<HTMLDialogElement>();
-  const [settingsOpen, setSettingsOpen] = createSignal(false);
+  const [settingsMode, setSettingsMode] = createSignal<"create" | "settings" | null>(null);
   const options = createMemo(() => {
     return projects.map((project) => ({ label: project.name, value: project.id }));
   });
 
   createEffect(
     () => {
-      if (!settingsOpen()) return undefined;
+      if (!settingsMode()) return undefined;
 
       return settingsDialogRef();
     },
@@ -356,15 +366,7 @@ function HeaderProjectDropdown() {
           {
             icon: Plus,
             label: "Create new project",
-            onClick: () => {
-              const name = prompt("Project name");
-
-              if (!name) {
-                return;
-              }
-
-              createProject(name);
-            },
+            onClick: () => setSettingsMode("create"),
           },
         ]}
         value={projectId()}
@@ -376,15 +378,16 @@ function HeaderProjectDropdown() {
         activeTransform={false}
         class="min-w-0 w-9 px-0"
         aria-label="Project settings"
-        onClick={() => setSettingsOpen(true)}
+        onClick={() => setSettingsMode("settings")}
       >
         <Icon icon={Settings} />
       </Button>
       <ProjectSettingsDialog
         ref={setSettingsDialogRef}
-        open={settingsOpen()}
+        open={Boolean(settingsMode())}
+        mode={settingsMode() ?? "settings"}
         onClose={() => {
-          setSettingsOpen(false);
+          setSettingsMode(null);
           if (settingsDialogRef()?.open) settingsDialogRef()?.close();
         }}
       />
