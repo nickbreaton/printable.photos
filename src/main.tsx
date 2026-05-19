@@ -268,6 +268,7 @@ function Sidebar() {
             })}
           />
         </fieldset>
+        <div aria-hidden="true" class="h-0 shrink-0" />
       </div>
     </aside>
   );
