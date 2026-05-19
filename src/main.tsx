@@ -12,6 +12,7 @@ import { Dropdown } from "./components/Dropdown";
 import { FileInput } from "./components/FileInput";
 import { Input } from "./components/Input";
 import { Select } from "./components/Select";
+import { SectionHeader } from "./components/SectionHeader";
 import { ImagePreview } from "./components/ImagePreview";
 import { Icon } from "./components/Icon";
 import { FileSpreadsheet, Plus, Settings, Trash2 } from "lucide-static";
@@ -141,8 +142,10 @@ function Sidebar() {
 
   return (
     <aside class="flex max-h-[calc(100vh-2.5rem)] w-80 shrink-0 flex-col gap-5 overflow-auto p-5 pt-0">
-      <fieldset class="flex flex-col gap-3">
-        <FieldLabel>
+      <fieldset class="grid grid-cols-2 gap-x-3 gap-y-5">
+        <SectionHeader class="col-span-2">Page layout</SectionHeader>
+        {/* TMP HIDDEN */}
+        <FieldLabel class="col-span-2 hidden">
           Paper
           <Select
             value={selectedPaperPreset()}
@@ -209,17 +212,11 @@ function Sidebar() {
             onChange={(event) => setPaper({ gap: event.target.valueAsNumber })}
           />
         </FieldLabel>
-        <Checkbox
-          checked={paper().allowRotation}
-          description="Photos will only be rotated to reduce total number of pages"
-          onChange={(event) => setPaper({ allowRotation: event.target.checked })}
-        >
-          Allow rotation
-        </Checkbox>
       </fieldset>
-      <fieldset class="flex flex-col gap-3 border-t border-border pt-5">
+      <fieldset class="grid grid-cols-2 gap-x-3 gap-y-5 border-t border-border pt-5">
+        <SectionHeader class="col-span-2">Image options</SectionHeader>
         <FieldLabel>
-          Image shape
+          Crop
           <Select
             value={imageConfig().shape}
             onChange={(event) => setImageConfig({ shape: event.target.value as ImageShape })}
@@ -229,7 +226,7 @@ function Sidebar() {
           </Select>
         </FieldLabel>
         <FieldLabel>
-          Image width
+          Width
           <Input
             type="number"
             step={1}
@@ -237,6 +234,14 @@ function Sidebar() {
             onChange={(event) => setImageConfig({ width: event.target.valueAsNumber })}
           />
         </FieldLabel>
+        <Checkbox
+          class="col-span-2"
+          checked={paper().allowRotation}
+          description="Photos will only be rotated to reduce total number of pages"
+          onChange={(event) => setPaper({ allowRotation: event.target.checked })}
+        >
+          Allow rotation
+        </Checkbox>
       </fieldset>
       <fieldset class="border-t border-border pt-5">
         <FileInput
