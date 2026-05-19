@@ -1,7 +1,8 @@
+import { omit } from "solid-js";
 import type { JSX } from "@solidjs/web";
 
 import { cn } from "../utils";
-import { omit } from "solid-js";
+import { labelTextClass } from "./FieldLabel";
 
 type CheckboxProps = JSX.InputHTMLAttributes<HTMLInputElement> & {
   children: JSX.Element;
@@ -17,7 +18,7 @@ export function Checkbox(props: CheckboxProps) {
       )}
     >
       <span class="flex flex-1 flex-col leading-snug">
-        <span class="select-none uppercase text-xs font-semibold tracking-tight">
+        <span class={cn("select-none", labelTextClass)}>
           {props.children}
         </span>
         {props.description && (
