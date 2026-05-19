@@ -65,6 +65,7 @@ interface DragState {
   type: DragType;
   startPointer: { x: number; y: number };
   startCrop: CropRect;
+  resizeFromCenter?: boolean;
 }
 
 function PreviewCanvas(props: { source: ImageBitmap; class?: string }) {
@@ -115,6 +116,7 @@ function computeResize(
   viewBoxHeight: number,
   aspectRatio: number,
   minDimension: number,
+  resizeFromCenter: boolean,
 ): CropRect {
   const centerX = startingCrop.x + startingCrop.width / 2;
   const centerY = startingCrop.y + startingCrop.height / 2;
@@ -127,6 +129,39 @@ function computeResize(
   const bottomSpace = (viewBoxHeight - startingCrop.y) * aspectRatio;
   const centeredXSpace = 2 * Math.min(centerX, viewBoxWidth - centerX);
   const centeredYSpace = 2 * Math.min(centerY, viewBoxHeight - centerY) * aspectRatio;
+  const centeredMaxWidth = Math.min(centeredXSpace, centeredYSpace);
+
+  if (resizeFromCenter) {
+    let widthDelta = 0;
+
+    switch (handle) {
+      case "left":
+      case "top-left":
+      case "bottom-left":
+        widthDelta = -deltaX * 2;
+        break;
+      case "right":
+      case "top-right":
+      case "bottom-right":
+        widthDelta = deltaX * 2;
+        break;
+      case "top":
+        widthDelta = -deltaY * 2 * aspectRatio;
+        break;
+      case "bottom":
+        widthDelta = deltaY * 2 * aspectRatio;
+        break;
+    }
+
+    const newWidth = clamp(startingCrop.width + widthDelta, minDimension, centeredMaxWidth);
+    const newHeight = newWidth / aspectRatio;
+    return {
+      x: centerX - newWidth / 2,
+      y: centerY - newHeight / 2,
+      width: newWidth,
+      height: newHeight,
+    };
+  }
 
   switch (handle) {
     case "bottom-right": {
@@ -303,10 +338,18 @@ export function ImagePreview(props: {
   }
 
   function handleWindowPointerMove(event: PointerEvent) {
-    const state = dragState();
+    let state = dragState();
     if (!state) return;
     const point = clientToPreview(event.clientX, event.clientY);
     if (!point) return;
+
+    if (state.type !== "move" && state.resizeFromCenter === undefined) {
+      state = {
+        ...state,
+        resizeFromCenter: event.altKey || event.shiftKey,
+      };
+      setDragState(state);
+    }
 
     const deltaX = point.x - state.startPointer.x;
     const deltaY = point.y - state.startPointer.y;
@@ -340,6 +383,7 @@ export function ImagePreview(props: {
         viewBoxHeight,
         aspectRatio,
         minDimension,
+        state.resizeFromCenter ?? false,
       ),
     );
   }
