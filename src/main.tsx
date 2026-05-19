@@ -234,14 +234,19 @@ function Sidebar() {
             onChange={(event) => setImageConfig({ width: event.target.valueAsNumber })}
           />
         </FieldLabel>
-        <Checkbox
-          class="col-span-2"
-          checked={paper().allowRotation}
-          description="Photos will only be rotated to reduce total number of pages"
-          onChange={(event) => setPaper({ allowRotation: event.target.checked })}
-        >
-          Allow rotation
-        </Checkbox>
+        {/* Key by project ID so the switch remounts without animating on project changes. */}
+        <For each={[projectId()]}>
+          {() => (
+            <Checkbox
+              class="col-span-2"
+              checked={paper().allowRotation}
+              description="Photos will only be rotated to reduce total number of pages"
+              onChange={(event) => setPaper({ allowRotation: event.target.checked })}
+            >
+              Allow rotation
+            </Checkbox>
+          )}
+        </For>
       </fieldset>
       <fieldset class="border-t border-border pt-5">
         <FileInput
