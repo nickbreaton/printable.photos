@@ -144,9 +144,8 @@ function Sidebar() {
     <aside class="flex max-h-[calc(100vh-2.5rem)] w-80 shrink-0 flex-col gap-5 overflow-auto p-5 pt-0">
       <fieldset class="grid grid-cols-2 gap-x-3 gap-y-5 border-t border-border pt-5">
         <SectionHeader class="col-span-2">Page layout</SectionHeader>
-        {/* TMP HIDDEN */}
-        <FieldLabel class="col-span-2 hidden">
-          Paper
+        <FieldLabel class="col-span-2">
+          Preset
           <Select
             value={selectedPaperPreset()}
             onChange={(event) => {
