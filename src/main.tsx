@@ -593,11 +593,10 @@ function Pages() {
         </Show>
       </Dialog>
       <div
-        class="grid gap-5 justify-center p-8 pr-5 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
+        class="grid gap-5 justify-center p-8 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
         style={{
           "grid-template-columns":
             bins.length > 1 ? `repeat(auto-fill, ${paper().width}${paper().units})` : "1fr",
-          "min-width": `${paper().width}${paper().units}`,
         }}
       >
         <For each={bins}>
