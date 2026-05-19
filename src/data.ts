@@ -75,7 +75,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
     margin: 0.25,
     gap: 0.25,
     units: "in",
-    allowRotation: false,
+    allowRotation: true,
   },
   image: {
     width: 3,

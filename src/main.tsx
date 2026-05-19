@@ -209,13 +209,13 @@ function Sidebar() {
             onChange={(event) => setPaper({ gap: event.target.valueAsNumber })}
           />
         </FieldLabel>
-        <label class="flex items-center gap-2 text-sm font-medium">
-          <Checkbox
-            checked={paper().allowRotation}
-            onChange={(event) => setPaper({ allowRotation: event.target.checked })}
-          />
+        <Checkbox
+          checked={paper().allowRotation}
+          description="Photos will only be rotated to reduce total number of pages"
+          onChange={(event) => setPaper({ allowRotation: event.target.checked })}
+        >
           Allow rotation
-        </label>
+        </Checkbox>
       </fieldset>
       <fieldset class="flex flex-col gap-3 border-t border-border pt-5">
         <FieldLabel>
