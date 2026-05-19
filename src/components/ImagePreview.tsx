@@ -127,7 +127,6 @@ function computeResize(
   const bottomSpace = (viewBoxHeight - startingCrop.y) * aspectRatio;
   const centeredXSpace = 2 * Math.min(centerX, viewBoxWidth - centerX);
   const centeredYSpace = 2 * Math.min(centerY, viewBoxHeight - centerY) * aspectRatio;
-  const centeredMaxWidth = Math.min(centeredXSpace, centeredYSpace);
 
   switch (handle) {
     case "bottom-right": {
@@ -169,52 +168,46 @@ function computeResize(
         height: newHeight,
       };
     }
-    // Side handles scale around the crop center, so dragging one side by N
-    // changes the total crop width/height by 2N.
     case "right": {
-      const newWidth = clamp(startingCrop.width + deltaX * 2, minDimension, centeredMaxWidth);
+      const maxWidth = Math.min(rightSpace, centeredYSpace);
+      const newWidth = clamp(startingCrop.width + deltaX, minDimension, maxWidth);
       const newHeight = newWidth / aspectRatio;
       return {
-        x: centerX - newWidth / 2,
+        x: startingCrop.x,
         y: centerY - newHeight / 2,
         width: newWidth,
         height: newHeight,
       };
     }
     case "left": {
-      const newWidth = clamp(startingCrop.width - deltaX * 2, minDimension, centeredMaxWidth);
+      const maxWidth = Math.min(leftSpace, centeredYSpace);
+      const newWidth = clamp(startingCrop.width - deltaX, minDimension, maxWidth);
       const newHeight = newWidth / aspectRatio;
       return {
-        x: centerX - newWidth / 2,
+        x: startingCrop.x + startingCrop.width - newWidth,
         y: centerY - newHeight / 2,
         width: newWidth,
         height: newHeight,
       };
     }
     case "top": {
-      const newWidth = clamp(
-        (startingCrop.height - deltaY * 2) * aspectRatio,
-        minDimension,
-        centeredMaxWidth,
-      );
+      const maxWidth = Math.min(centeredXSpace, topSpace);
+      const newWidth = clamp((startingCrop.height - deltaY) * aspectRatio, minDimension, maxWidth);
       const newHeight = newWidth / aspectRatio;
       return {
         x: centerX - newWidth / 2,
-        y: centerY - newHeight / 2,
+        y: startingCrop.y + startingCrop.height - newHeight,
         width: newWidth,
         height: newHeight,
       };
     }
     case "bottom": {
-      const newWidth = clamp(
-        (startingCrop.height + deltaY * 2) * aspectRatio,
-        minDimension,
-        centeredMaxWidth,
-      );
+      const maxWidth = Math.min(centeredXSpace, bottomSpace);
+      const newWidth = clamp((startingCrop.height + deltaY) * aspectRatio, minDimension, maxWidth);
       const newHeight = newWidth / aspectRatio;
       return {
         x: centerX - newWidth / 2,
-        y: centerY - newHeight / 2,
+        y: startingCrop.y,
         width: newWidth,
         height: newHeight,
       };
