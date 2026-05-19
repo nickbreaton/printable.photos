@@ -267,9 +267,7 @@ function ProjectSettingsDialog(props: {
   mode: "create" | "settings";
   onClose: () => void;
 }) {
-  const [name, setName] = createSignal(() =>
-    props.mode === "create" ? "" : project().name,
-  );
+  const [name, setName] = createSignal(() => (props.mode === "create" ? "" : project().name));
   const canDeleteProject = createMemo(() => projects.length > 1);
 
   async function saveProjectName() {
@@ -303,7 +301,10 @@ function ProjectSettingsDialog(props: {
           void saveProjectName();
         }}
       >
-        <div class="min-h-32">
+        <h2 class="text-xl font-semibold">
+          {props.mode === "create" ? "Create project" : "Project settings"}
+        </h2>
+        <div class="min-h-24">
           <FieldLabel>
             Project name
             <Input
