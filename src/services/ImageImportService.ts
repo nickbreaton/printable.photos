@@ -1,14 +1,9 @@
 import { Context, DateTime, Effect, Layer, Schema, Semaphore } from "effect";
 
-import { database, type CropCoordinates, type OriginalProjectImage, type StoredProjectImage } from "../data";
+import { database, type CropCoordinates } from "../data";
 import { createImportImageBlobs } from "../imageResize";
 
 const MAX_IMPORT_BYTES = 100 * 1024 * 1024; // 100 MiB
-
-interface ImportedImage {
-  image: StoredProjectImage;
-  originalImage: OriginalProjectImage;
-}
 
 class ImageImportError extends Schema.TaggedErrorClass<ImageImportError>()("ImageImportError", {
   fileName: Schema.String,
@@ -19,7 +14,7 @@ class DatabaseWriteError extends Schema.TaggedErrorClass<DatabaseWriteError>()("
   cause: Schema.Defect,
 }) {}
 
-const CropCoordinatesSchema: Schema.Schema<CropCoordinates> = Schema.Struct({
+const CropCoordinatesSchema: Schema.Codec<CropCoordinates> = Schema.Struct({
   x: Schema.Number,
   y: Schema.Number,
   width: Schema.Number,
@@ -52,7 +47,9 @@ const ImportedImageSchema = Schema.Struct({
   originalImage: OriginalProjectImageSchema,
 });
 
-const importImage = Effect.fn("importImage")(function* (options: { file: File; projectId: string; order: number }) {
+type ImportedImage = Schema.Codec.Encoded<typeof ImportedImageSchema>;
+
+const importImage = Effect.fn("ImageImportService.importImage")(function* (options: { file: File; projectId: string; order: number }) {
   const bitmap = yield* Effect.acquireRelease(
     Effect.tryPromise({
       try: () => createImageBitmap(options.file),
@@ -67,7 +64,7 @@ const importImage = Effect.fn("importImage")(function* (options: { file: File; p
   const timestamp = yield* DateTime.now;
   const imageId = yield* Effect.promise(() => Promise.resolve(globalThis.crypto.randomUUID()));
 
-  const importedImage = yield* Schema.encodeEffect(ImportedImageSchema)({
+  return yield* Schema.encodeEffect(ImportedImageSchema)({
     image: {
       id: imageId,
       projectId: options.projectId,
@@ -83,11 +80,13 @@ const importImage = Effect.fn("importImage")(function* (options: { file: File; p
     },
     originalImage: { imageId, blob: options.file },
   });
-
-  return importedImage as ImportedImage;
 }, Effect.scoped);
 
-const importImages = Effect.fn("importImages")(function* (options: { files: File[]; projectId: string; nextOrder: number }) {
+const importImages = Effect.fn("ImageImportService.importImages")(function* (options: {
+  files: File[];
+  projectId: string;
+  nextOrder: number;
+}) {
   const byteSemaphore = yield* Semaphore.make(MAX_IMPORT_BYTES);
 
   return yield* Effect.all(
@@ -108,7 +107,7 @@ function getNextOrder(images: readonly { order: number }[]) {
   return images.reduce((maxOrder, image) => Math.max(maxOrder, image.order), -1) + 1;
 }
 
-const saveImportedImages = Effect.fn("saveImportedImages")(function* (importedImages: ImportedImage[]) {
+const saveImportedImages = Effect.fn("ImageImportService.saveImportedImages")(function* (importedImages: ImportedImage[]) {
   if (importedImages.length === 0) {
     return;
   }
@@ -139,16 +138,8 @@ interface AddImagesOptions {
   currentImages: readonly { order: number }[];
 }
 
-export class ImageImportService extends Context.Service<
-  ImageImportService,
-  {
-    addImages(options: AddImagesOptions): Effect.Effect<void, DatabaseWriteError | ImageImportError | Schema.SchemaError>;
-  }
->()("printablePhotos/services/ImageImportService") {
-  static readonly layer = Layer.succeed(
-    ImageImportService,
-    ImageImportService.of({
-      addImages: (options) => addImages(options) as Effect.Effect<void, DatabaseWriteError | ImageImportError | Schema.SchemaError>,
-    }),
-  );
+export class ImageImportService extends Context.Service<ImageImportService>()("printablePhotos/services/ImageImportService", {
+  make: Effect.succeed({ addImages }),
+}) {
+  static readonly layer = Layer.effect(ImageImportService, ImageImportService.make);
 }
