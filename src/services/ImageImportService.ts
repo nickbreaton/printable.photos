@@ -15,13 +15,6 @@ class ImageImportError extends Schema.TaggedErrorClass<ImageImportError>()("Imag
   cause: Schema.Defect,
 }) {}
 
-class InvalidImportedImage extends Schema.TaggedErrorClass<InvalidImportedImage>()(
-  "InvalidImportedImage",
-  {
-    cause: Schema.Defect,
-  },
-) {}
-
 class DatabaseWriteError extends Schema.TaggedErrorClass<DatabaseWriteError>()("DatabaseWriteError", {
   cause: Schema.Defect,
 }) {}
@@ -50,60 +43,40 @@ const ImportedImageSchema = Schema.Struct({
   originalImage: OriginalProjectImageSchema,
 });
 
-const validateImportedImage = Effect.fn("validateImportedImage")(function* (importedImage: ImportedImage) {
-  yield* Schema.decodeUnknownEffect(ImportedImageSchema)(importedImage).pipe(
-    Effect.mapError((cause) => new InvalidImportedImage({ cause })),
-  );
-
-  return importedImage;
-});
-
-const importImage = Effect.fn("importImage")(function* (options: {
-  file: File;
-  projectId: string;
-  order: number;
-}) {
-  return yield* Effect.scoped(
-    Effect.gen(function* () {
-      const bitmap = yield* Effect.acquireRelease(
-        Effect.tryPromise({
-          try: () => createImageBitmap(options.file),
-          catch: (cause) => new ImageImportError({ fileName: options.file.name, cause }),
-        }),
-        (bitmap) => Effect.sync(() => bitmap.close()),
-      );
-      const imageBlobs = yield* Effect.tryPromise({
-        try: () => createImportImageBlobs({ blob: options.file, bitmap }),
-        catch: (cause) => new ImageImportError({ fileName: options.file.name, cause }),
-      });
-      const timestamp = yield* Effect.sync(() => Date.now());
-      const imageId = yield* Effect.sync(() => crypto.randomUUID());
-
-      return yield* validateImportedImage({
-        image: {
-          id: imageId,
-          projectId: options.projectId,
-          order: options.order,
-          name: options.file.name,
-          type: options.file.type,
-          width: imageBlobs.optimizedDimensions.width,
-          height: imageBlobs.optimizedDimensions.height,
-          optimizedBlob: imageBlobs.optimizedBlob,
-          crops: {},
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        },
-        originalImage: { imageId, blob: options.file },
-      });
+const importImage = Effect.fn("importImage")(function* (options: { file: File; projectId: string; order: number }) {
+  const bitmap = yield* Effect.acquireRelease(
+    Effect.tryPromise({
+      try: () => createImageBitmap(options.file),
+      catch: (cause) => new ImageImportError({ fileName: options.file.name, cause }),
     }),
+    (bitmap) => Effect.sync(() => bitmap.close()),
   );
-});
+  const imageBlobs = yield* Effect.tryPromise({
+    try: () => createImportImageBlobs({ blob: options.file, bitmap }),
+    catch: (cause) => new ImageImportError({ fileName: options.file.name, cause }),
+  });
+  const timestamp = yield* Effect.sync(() => Date.now());
+  const imageId = yield* Effect.sync(() => crypto.randomUUID());
 
-const importImages = Effect.fn("importImages")(function* (options: {
-  files: File[];
-  projectId: string;
-  nextOrder: number;
-}) {
+  return yield* Schema.decodeUnknownEffect(ImportedImageSchema)({
+    image: {
+      id: imageId,
+      projectId: options.projectId,
+      order: options.order,
+      name: options.file.name,
+      type: options.file.type,
+      width: imageBlobs.optimizedDimensions.width,
+      height: imageBlobs.optimizedDimensions.height,
+      optimizedBlob: imageBlobs.optimizedBlob,
+      crops: {},
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+    originalImage: { imageId, blob: options.file },
+  });
+}, Effect.scoped);
+
+const importImages = Effect.fn("importImages")(function* (options: { files: File[]; projectId: string; nextOrder: number }) {
   const byteSemaphore = yield* Semaphore.make(MAX_IMPORT_BYTES);
 
   return yield* Effect.all(
@@ -131,27 +104,15 @@ const saveImportedImages = Effect.fn("saveImportedImages")(function* (importedIm
 
   yield* Effect.tryPromise({
     try: () =>
-      database.transaction(
-        "rw",
-        database.projects,
-        database.images,
-        database.originalImages,
-        async () => {
-          await database.images.bulkAdd(importedImages.map((importedImage) => importedImage.image));
-          await database.originalImages.bulkAdd(
-            importedImages.map((importedImage) => importedImage.originalImage),
-          );
-        },
-      ),
+      database.transaction("rw", database.projects, database.images, database.originalImages, async () => {
+        await database.images.bulkAdd(importedImages.map((importedImage) => importedImage.image));
+        await database.originalImages.bulkAdd(importedImages.map((importedImage) => importedImage.originalImage));
+      }),
     catch: (cause) => new DatabaseWriteError({ cause }),
   });
 });
 
-const addImages = Effect.fn("ImageImportService.addImages")(function* (options: {
-  files: FileList;
-  projectId: string;
-  currentImages: readonly { order: number }[];
-}) {
+const addImages = Effect.fn("ImageImportService.addImages")(function* (options: AddImagesOptions) {
   const importedImages = yield* importImages({
     files: Array.from(options.files),
     projectId: options.projectId,
@@ -161,12 +122,16 @@ const addImages = Effect.fn("ImageImportService.addImages")(function* (options: 
   yield* saveImportedImages(importedImages);
 });
 
+interface AddImagesOptions {
+  files: FileList;
+  projectId: string;
+  currentImages: readonly { order: number }[];
+}
+
 export class ImageImportService extends Context.Service<
   ImageImportService,
   {
-    addImages(options: { files: FileList; projectId: string; currentImages: readonly { order: number }[] }): ReturnType<
-      typeof addImages
-    >;
+    addImages(options: AddImagesOptions): ReturnType<typeof addImages>;
   }
 >()("printablePhotos/services/ImageImportService") {
   static readonly layer = Layer.succeed(
