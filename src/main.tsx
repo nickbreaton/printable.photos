@@ -15,7 +15,7 @@ import { Select } from "./components/Select";
 import { SectionHeader } from "./components/SectionHeader";
 import { ImagePreview } from "./components/ImagePreview";
 import { Icon } from "./components/Icon";
-import { FileSpreadsheet, Plus, Settings, Trash2 } from "lucide-static";
+import { FileSpreadsheet, ImageUp, Plus, Settings, Trash2 } from "lucide-static";
 import {
   computeInitialCrop,
   cropFromPercentages,
@@ -266,7 +266,10 @@ function Sidebar() {
               // yield resolve(() => Object.keys(bins));
               event.target.value = "";
             })}
-          />
+          >
+            Import photos
+            <Icon icon={ImageUp} class="ml-2" />
+          </FileInput>
         </fieldset>
         <div aria-hidden="true" class="h-0 shrink-0" />
       </div>
