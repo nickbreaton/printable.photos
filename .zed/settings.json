@@ -1,4 +1,18 @@
 {
+  "file_scan_exclusions": [
+    // BEGIN Zed defaults
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/.jj",
+    "**/CVS",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/.classpath",
+    "**/.settings",
+    // END Zed defaults
+    "repos/**"
+  ],
   "formatter": {
     "language_server": {
       "name": "oxfmt"
@@ -8,6 +22,27 @@
     "tailwindcss-language-server": {
       "settings": {
         "validate": false
+      }
+    },
+    "vtsls": {
+      "settings": {
+        "typescript": {
+          "preferences": {
+            "autoImportFileExcludePatterns": ["repos/**"]
+          }
+        },
+        "javascript": {
+          "preferences": {
+            "autoImportFileExcludePatterns": ["repos/**"]
+          }
+        }
+      }
+    },
+    "typescript-language-server": {
+      "initialization_options": {
+        "preferences": {
+          "autoImportFileExcludePatterns": ["repos/**"]
+        }
       }
     }
   }
