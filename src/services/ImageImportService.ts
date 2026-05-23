@@ -1,9 +1,9 @@
-import { Context, Effect, Layer, Schema, Semaphore } from "effect";
+import { Context, DateTime, Effect, Layer, Schema, Semaphore } from "effect";
 
-import { database, type OriginalProjectImage, type StoredProjectImage } from "../data";
+import { database, type CropCoordinates, type OriginalProjectImage, type StoredProjectImage } from "../data";
 import { createImportImageBlobs } from "../imageResize";
 
-const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
+const MAX_IMPORT_BYTES = 100 * 1024 * 1024; // 100 MiB
 
 interface ImportedImage {
   image: StoredProjectImage;
@@ -19,18 +19,27 @@ class DatabaseWriteError extends Schema.TaggedErrorClass<DatabaseWriteError>()("
   cause: Schema.Defect,
 }) {}
 
+const CropCoordinatesSchema: Schema.Schema<CropCoordinates> = Schema.Struct({
+  x: Schema.Number,
+  y: Schema.Number,
+  width: Schema.Number,
+  height: Schema.Number,
+});
+
+const NonNegativeNumberSchema = Schema.Number.check(Schema.isGreaterThanOrEqualTo(0));
+
 const StoredProjectImageSchema = Schema.Struct({
   id: Schema.String,
   projectId: Schema.String,
   order: Schema.Number,
   name: Schema.String,
   type: Schema.String,
-  width: Schema.Number,
-  height: Schema.Number,
+  width: NonNegativeNumberSchema,
+  height: NonNegativeNumberSchema,
   optimizedBlob: Schema.optionalKey(Schema.instanceOf(Blob)),
-  crops: Schema.Record(Schema.String, Schema.Unknown),
-  createdAt: Schema.Number,
-  updatedAt: Schema.Number,
+  crops: Schema.Record(Schema.String, CropCoordinatesSchema),
+  createdAt: Schema.DateTimeUtcFromMillis,
+  updatedAt: Schema.DateTimeUtcFromMillis,
 });
 
 const OriginalProjectImageSchema = Schema.Struct({
@@ -55,10 +64,10 @@ const importImage = Effect.fn("importImage")(function* (options: { file: File; p
     try: () => createImportImageBlobs({ blob: options.file, bitmap }),
     catch: (cause) => new ImageImportError({ fileName: options.file.name, cause }),
   });
-  const timestamp = yield* Effect.sync(() => Date.now());
-  const imageId = yield* Effect.sync(() => crypto.randomUUID());
+  const timestamp = yield* DateTime.now;
+  const imageId = yield* Effect.promise(() => Promise.resolve(globalThis.crypto.randomUUID()));
 
-  return yield* Schema.decodeUnknownEffect(ImportedImageSchema)({
+  const importedImage = yield* Schema.encodeEffect(ImportedImageSchema)({
     image: {
       id: imageId,
       projectId: options.projectId,
@@ -74,6 +83,8 @@ const importImage = Effect.fn("importImage")(function* (options: { file: File; p
     },
     originalImage: { imageId, blob: options.file },
   });
+
+  return importedImage as ImportedImage;
 }, Effect.scoped);
 
 const importImages = Effect.fn("importImages")(function* (options: { files: File[]; projectId: string; nextOrder: number }) {
@@ -131,13 +142,13 @@ interface AddImagesOptions {
 export class ImageImportService extends Context.Service<
   ImageImportService,
   {
-    addImages(options: AddImagesOptions): ReturnType<typeof addImages>;
+    addImages(options: AddImagesOptions): Effect.Effect<void, DatabaseWriteError | ImageImportError | Schema.SchemaError>;
   }
 >()("printablePhotos/services/ImageImportService") {
   static readonly layer = Layer.succeed(
     ImageImportService,
     ImageImportService.of({
-      addImages,
+      addImages: (options) => addImages(options) as Effect.Effect<void, DatabaseWriteError | ImageImportError | Schema.SchemaError>,
     }),
   );
 }
