@@ -235,19 +235,16 @@ function Sidebar() {
               onChange={(event) => setImageConfig({ width: event.target.valueAsNumber })}
             />
           </FieldLabel>
-          {/* Key by project ID so the switch remounts without animating on project changes. */}
-          <For each={[projectId()]}>
-            {() => (
-              <Checkbox
-                class="col-span-2"
-                checked={paper().allowRotation}
-                description="Photos will only be rotated to reduce total number of pages"
-                onChange={(event) => setPaper({ allowRotation: event.target.checked })}
-              >
-                Allow rotation
-              </Checkbox>
-            )}
-          </For>
+          <Show when={projectId()} keyed>
+            <Checkbox
+              class="col-span-2"
+              checked={paper().allowRotation}
+              description="Photos will only be rotated to reduce total number of pages"
+              onChange={(event) => setPaper({ allowRotation: event.target.checked })}
+            >
+              Allow rotation
+            </Checkbox>
+          </Show>
         </fieldset>
         <fieldset class="border-t border-border pt-5">
           <FileInput
@@ -608,53 +605,50 @@ function Pages() {
           )}
         </Show>
       </Dialog>
-      {/* Key by project ID so the preview scroller remounts and resets scroll on project changes. */}
-      <For each={[projectId()]}>
-        {() => (
-          <div
-            class="grid gap-5 justify-center p-8 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
-            style={{
-              "grid-template-columns":
-                bins.length > 1 ? `repeat(auto-fill, ${paper().width}${paper().units})` : "1fr",
-            }}
-          >
-            <For each={bins}>
-              {(packedBin) => (
-                <div
-                  class={["relative mx-auto w-full overflow-hidden min-w-3xs", cardSurfaceClass]}
-                  style={{
-                    "aspect-ratio": paper().width / paper().height,
-                    "max-width": `${paper().width}${paper().units}`,
-                  }}
-                >
-                  <For each={packedBin.rects}>
-                    {(packedRect) => (
-                      <button
-                        type="button"
-                        class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:brightness-90 dark:hover:opacity-85 dark:hover:brightness-100 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
-                        style={getPhotoStyle(packedRect, paper())}
-                        title="Edit image"
-                        onClick={() => openCropDialog(packedRect)}
-                      >
-                        <Show when={images().find((image) => image.id === packedRect.data.id)}>
-                          {(image) => (
-                            <AsyncImage
-                              class="block max-w-none object-cover visible [dynamic-range-limit:standard] select-none"
-                              style={getCroppedImageStyle(image(), packedRect)}
-                              src={image().objectUrl}
-                              draggable="false"
-                            />
-                          )}
-                        </Show>
-                      </button>
-                    )}
-                  </For>
-                </div>
-              )}
-            </For>
-          </div>
-        )}
-      </For>
+      <Show when={projectId()} keyed>
+        <div
+          class="grid gap-5 justify-center p-8 overflow-y-auto h-full auto-rows-max w-full [scrollbar-gutter:stable]"
+          style={{
+            "grid-template-columns":
+              bins.length > 1 ? `repeat(auto-fill, ${paper().width}${paper().units})` : "1fr",
+          }}
+        >
+          <For each={bins}>
+            {(packedBin) => (
+              <div
+                class={["relative mx-auto w-full overflow-hidden min-w-3xs", cardSurfaceClass]}
+                style={{
+                  "aspect-ratio": paper().width / paper().height,
+                  "max-width": `${paper().width}${paper().units}`,
+                }}
+              >
+                <For each={packedBin.rects}>
+                  {(packedRect) => (
+                    <button
+                      type="button"
+                      class="group/photo relative block overflow-hidden border-0 bg-transparent p-0 outline-0 hover:brightness-90 dark:hover:opacity-85 dark:hover:brightness-100 focus-visible:outline-[4px] focus-visible:outline-ring/50 focus-visible:opacity-95"
+                      style={getPhotoStyle(packedRect, paper())}
+                      title="Edit image"
+                      onClick={() => openCropDialog(packedRect)}
+                    >
+                      <Show when={images().find((image) => image.id === packedRect.data.id)}>
+                        {(image) => (
+                          <AsyncImage
+                            class="block max-w-none object-cover visible [dynamic-range-limit:standard] select-none"
+                            style={getCroppedImageStyle(image(), packedRect)}
+                            src={image().objectUrl}
+                            draggable="false"
+                          />
+                        )}
+                      </Show>
+                    </button>
+                  )}
+                </For>
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
     </>
   );
 }
