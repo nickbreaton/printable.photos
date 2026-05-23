@@ -16,6 +16,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.4.2",
+    "effect": "4.0.0-beta.70",
     "fflate": "^0.8.2",
     "lucide-static": "^1.14.0",
     "maxrects-packer": "^2.7.3",
