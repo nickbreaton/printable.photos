@@ -528,7 +528,6 @@ function Pages() {
     dialogRef()?.close();
   }
 
-
   createEffect(
     () => {
       const selectedCropRectangle = selectedCrop();
@@ -665,7 +664,7 @@ function RootApplication() {
     <Loading>
       <Fonts />
       <header class="px-5 py-3 grid grid-cols-subgrid col-span-2">
-        <span class="font-semibold tracking-tight text-xl flex gap-2 items-center">
+        <span class="font-semibold tracking-tight text-lg flex gap-2 items-center">
           <Icon icon={FileSpreadsheet} class="scale-150" />
           printable.photos
         </span>
