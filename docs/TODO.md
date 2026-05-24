@@ -1,3 +1,4 @@
 - Logic getting messy, lets rewrite core logic in Effect
 - Validation on inputs somehow (larger images than page, prevent negative values, etc.)
 - Clicking dropdown option closes popover a split second before projects update. This happens because solid controls all DOM operations derived from state, but the popover is direct DOM manipulation via its attributes. We can use JS to close it instead after the state mutated in the action handler resolves.
+- Mobile
