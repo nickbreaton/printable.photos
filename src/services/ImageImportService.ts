@@ -1,9 +1,9 @@
 import { Context, DateTime, Effect, Layer, Schema, Semaphore } from "effect";
 
 import { database } from "../data";
-import { createImportImageBlobs } from "../imageResize";
-import { DatabaseWriteError, ImageImportError, ImportedImageSchema, type ImportedImage } from "../schema";
+import { DatabaseWriteError, ImageImportError, ImportedImageSchema } from "../schema";
 import { MemoryEstimationService } from "./MemoryEstimationService";
+import { OptimizeImageService } from "./OptimizeImageService";
 import { UUIDService } from "./UUIDService";
 
 function getNextOrder(images: readonly { order: number }[]) {
@@ -31,6 +31,7 @@ interface AddImagesOptions {
 export class ImageImportService extends Context.Service<ImageImportService>()("ImageImportService", {
   make: Effect.gen(function* () {
     const memoryEstimationService = yield* MemoryEstimationService;
+    const optimizeImageService = yield* OptimizeImageService;
     const { randomUUID } = yield* UUIDService;
 
     const importImage = Effect.fn("ImageImportService.importImage")(function* (options: ImportImageOptions) {
@@ -42,10 +43,9 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
         (bitmap) => Effect.sync(() => bitmap.close()),
       );
 
-      const imageBlobs = yield* Effect.tryPromise({
-        try: () => createImportImageBlobs({ blob: options.file, bitmap }),
-        catch: (cause) => new ImageImportError({ fileName: options.file.name, cause }),
-      });
+      const optimizedBlob = yield* optimizeImageService
+        .optimize(bitmap)
+        .pipe(Effect.mapError((cause) => new ImageImportError({ fileName: options.file.name, cause })));
 
       const createdAt = yield* DateTime.now;
       const imageId = yield* randomUUID();
@@ -59,7 +59,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
           type: options.file.type,
           width: bitmap.width,
           height: bitmap.height,
-          optimizedBlob: imageBlobs.optimizedBlob,
+          optimizedBlob,
           crops: {},
           createdAt,
           updatedAt: createdAt,
@@ -108,6 +108,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
 }) {
   static readonly layer = Layer.effect(ImageImportService, ImageImportService.make).pipe(
     Layer.provide(MemoryEstimationService.layer),
+    Layer.provide(OptimizeImageService.layer),
     Layer.provide(UUIDService.layer),
   );
 }

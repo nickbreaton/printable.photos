@@ -11,6 +11,11 @@ export class DatabaseWriteError extends Schema.TaggedErrorClass<DatabaseWriteErr
   cause: Schema.Defect,
 }) {}
 
+export class OptimizeImageCanvasContextError extends Schema.TaggedErrorClass<OptimizeImageCanvasContextError>()(
+  "OptimizeImageCanvasContextError",
+  {},
+) {}
+
 export const CropCoordinatesSchema: Schema.Codec<CropCoordinates> = Schema.Struct({
   x: Schema.Number,
   y: Schema.Number,
