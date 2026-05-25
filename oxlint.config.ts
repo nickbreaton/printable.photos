@@ -8,5 +8,8 @@ export default defineConfig({
       entryPoint: "src/style.css",
     },
   },
-  rules: betterTailwindcss.configs.correctness.rules,
+  rules: {
+    ...betterTailwindcss.configs.correctness.rules,
+    "eslint/require-yield": "off",
+  },
 });
