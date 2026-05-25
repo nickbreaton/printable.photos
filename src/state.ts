@@ -8,7 +8,6 @@ import {
   refresh,
   snapshot,
 } from "solid-js";
-import { Effect } from "effect";
 import { MaxRectsPacker } from "maxrects-packer";
 
 import {
@@ -21,6 +20,7 @@ import {
   type ProjectImage,
 } from "./data";
 import type { PackedImageBin } from "./layout";
+import { runtime } from "./runtime";
 import { ImageImportService } from "./services/ImageImportService";
 
 export const projects = createProjection((): Promise<Project[]> => {
@@ -152,15 +152,13 @@ export const images = mapArray(
 );
 
 export const addImages = action(function* (files: FileList) {
-  yield Effect.runPromise(
+  yield runtime.runPromise(
     ImageImportService.use((service) =>
       service.addImages({
         files,
         projectId: snapshot(project().id),
         currentImages: snapshot(projectImages),
       }),
-    ).pipe(
-      Effect.provide(ImageImportService.layer),
     ),
   );
   refresh(projectImages);
