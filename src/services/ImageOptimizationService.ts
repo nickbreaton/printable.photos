@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
-import { OptimizeImageCanvasContextError } from "../schema";
+import { OptimizeImageBlobError, OptimizeImageCanvasContextError } from "../schema";
 
 const MAX_OPTIMIZED_IMAGE_PIXELS = 6_000_000;
 const JPEG_QUALITY = 0.9;
@@ -15,13 +15,13 @@ function getOptimizedDimensions(bitmap: ImageBitmap) {
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
-  return new Promise<Blob>((resolve, reject) => {
+  return Effect.callback<Blob, OptimizeImageBlobError>((resume) => {
     canvas.toBlob(
       (blob) => {
         if (blob) {
-          resolve(blob);
+          resume(Effect.succeed(blob));
         } else {
-          reject(new Error("Failed to create image blob"));
+          resume(Effect.fail(new OptimizeImageBlobError()));
         }
       },
       type,
@@ -30,9 +30,9 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
   });
 }
 
-export class OptimizeImageService extends Context.Service<OptimizeImageService>()("OptimizeImageService", {
+export class ImageOptimizationService extends Context.Service<ImageOptimizationService>()("ImageOptimizationService", {
   make: Effect.gen(function* () {
-    const optimize = Effect.fn("OptimizeImageService.optimize")(function* (bitmap: ImageBitmap) {
+    const optimize = Effect.fn("ImageOptimizationService.optimize")(function* (bitmap: ImageBitmap) {
       const dimensions = getOptimizedDimensions(bitmap);
       const canvas = document.createElement("canvas");
 
@@ -56,14 +56,11 @@ export class OptimizeImageService extends Context.Service<OptimizeImageService>(
       context.imageSmoothingQuality = "high";
       context.drawImage(bitmap, 0, 0, dimensions.width, dimensions.height);
 
-      return yield* Effect.tryPromise({
-        try: () => canvasToBlob(canvas, "image/jpeg", JPEG_QUALITY),
-        catch: (cause) => cause,
-      });
+      return yield* canvasToBlob(canvas, "image/jpeg", JPEG_QUALITY);
     }, Effect.scoped);
 
     return { optimize };
   }),
 }) {
-  static readonly layer = Layer.effect(OptimizeImageService, OptimizeImageService.make);
+  static readonly layer = Layer.effect(ImageOptimizationService, ImageOptimizationService.make);
 }

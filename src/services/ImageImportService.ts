@@ -3,7 +3,7 @@ import { Context, DateTime, Effect, Layer, Schema, Semaphore } from "effect";
 import { database } from "../data";
 import { DatabaseWriteError, ImageImportError, ImportedImageSchema } from "../schema";
 import { MemoryEstimationService } from "./MemoryEstimationService";
-import { OptimizeImageService } from "./OptimizeImageService";
+import { ImageOptimizationService } from "./ImageOptimizationService";
 import { UUIDService } from "./UUIDService";
 
 function getNextOrder(images: readonly { order: number }[]) {
@@ -31,7 +31,7 @@ interface AddImagesOptions {
 export class ImageImportService extends Context.Service<ImageImportService>()("ImageImportService", {
   make: Effect.gen(function* () {
     const memoryEstimationService = yield* MemoryEstimationService;
-    const optimizeImageService = yield* OptimizeImageService;
+    const imageOptimizationService = yield* ImageOptimizationService;
     const { randomUUID } = yield* UUIDService;
 
     const importImage = Effect.fn("ImageImportService.importImage")(function* (options: ImportImageOptions) {
@@ -43,7 +43,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
         (bitmap) => Effect.sync(() => bitmap.close()),
       );
 
-      const optimizedBlob = yield* optimizeImageService
+      const optimizedBlob = yield* imageOptimizationService
         .optimize(bitmap)
         .pipe(Effect.mapError((cause) => new ImageImportError({ fileName: options.file.name, cause })));
 
@@ -108,7 +108,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
 }) {
   static readonly layer = Layer.effect(ImageImportService, ImageImportService.make).pipe(
     Layer.provide(MemoryEstimationService.layer),
-    Layer.provide(OptimizeImageService.layer),
+    Layer.provide(ImageOptimizationService.layer),
     Layer.provide(UUIDService.layer),
   );
 }

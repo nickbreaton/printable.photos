@@ -16,6 +16,11 @@ export class OptimizeImageCanvasContextError extends Schema.TaggedErrorClass<Opt
   {},
 ) {}
 
+export class OptimizeImageBlobError extends Schema.TaggedErrorClass<OptimizeImageBlobError>()(
+  "OptimizeImageBlobError",
+  {},
+) {}
+
 export const CropCoordinatesSchema: Schema.Codec<CropCoordinates> = Schema.Struct({
   x: Schema.Number,
   y: Schema.Number,
