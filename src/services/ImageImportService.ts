@@ -2,13 +2,9 @@ import { Context, DateTime, Effect, Layer, Schema, Semaphore } from "effect";
 
 import { database } from "../data";
 import { createImportImageBlobs } from "../imageResize";
-import {
-  DatabaseWriteError,
-  ImageImportError,
-  ImportedImageSchema,
-  type ImportedImage,
-} from "../schema";
+import { DatabaseWriteError, ImageImportError, ImportedImageSchema, type ImportedImage } from "../schema";
 import { MemoryEstimationService } from "./MemoryEstimationService";
+import { UUIDService } from "./UUIDService";
 
 function getNextOrder(images: readonly { order: number }[]) {
   return images.reduce((maxOrder, image) => Math.max(maxOrder, image.order), -1) + 1;
@@ -35,8 +31,9 @@ interface AddImagesOptions {
 export class ImageImportService extends Context.Service<ImageImportService>()("ImageImportService", {
   make: Effect.gen(function* () {
     const memoryEstimationService = yield* MemoryEstimationService;
+    const { randomUUID } = yield* UUIDService;
 
-    const importImage = Effect.fn("importImage")(function* (options: ImportImageOptions) {
+    const importImage = Effect.fn("ImageImportService.importImage")(function* (options: ImportImageOptions) {
       const bitmap = yield* Effect.acquireRelease(
         Effect.tryPromise({
           try: () => createImageBitmap(options.file),
@@ -44,12 +41,14 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
         }),
         (bitmap) => Effect.sync(() => bitmap.close()),
       );
+
       const imageBlobs = yield* Effect.tryPromise({
         try: () => createImportImageBlobs({ blob: options.file, bitmap }),
         catch: (cause) => new ImageImportError({ fileName: options.file.name, cause }),
       });
-      const timestamp = yield* DateTime.now;
-      const imageId = yield* Effect.promise(() => Promise.resolve(globalThis.crypto.randomUUID()));
+
+      const createdAt = yield* DateTime.now;
+      const imageId = yield* randomUUID();
 
       return yield* Schema.encodeEffect(ImportedImageSchema)({
         image: {
@@ -58,39 +57,41 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
           order: options.order,
           name: options.file.name,
           type: options.file.type,
-          width: imageBlobs.optimizedDimensions.width,
-          height: imageBlobs.optimizedDimensions.height,
+          width: bitmap.width,
+          height: bitmap.height,
           optimizedBlob: imageBlobs.optimizedBlob,
           crops: {},
-          createdAt: timestamp,
-          updatedAt: timestamp,
+          createdAt,
+          updatedAt: createdAt,
         },
         originalImage: { imageId, blob: options.file },
       });
     }, Effect.scoped);
 
-    const importImages = Effect.fn("importImages")(function* (options: ImportImagesOptions) {
+    const importImages = Effect.fn("ImageImportService.importImages")(function* (options: ImportImagesOptions) {
       const maxImportBytes = yield* memoryEstimationService.estimate();
       const byteSemaphore = yield* Semaphore.make(maxImportBytes);
 
       return yield* Effect.all(
-        options.files.map((file, index) =>
-          byteSemaphore.withPermits(Math.min(file.size, maxImportBytes))(
-            importImage({
-              file,
-              projectId: options.projectId,
-              order: options.nextOrder + index,
-            }),
-          ),
-        ),
+        options.files.map((file, index) => {
+          // Still allow images exceeding the max parallel size to be processed
+          const permitSize = Math.min(file.size, maxImportBytes);
+
+          const projectId = options.projectId;
+          const order = options.nextOrder + index;
+
+          return importImage({ file, projectId, order }).pipe(byteSemaphore.withPermits(permitSize));
+        }),
         { concurrency: "unbounded" },
       );
     });
 
-    const saveImportedImages = Effect.fn("saveImportedImages")(function* (importedImages: ImportedImage[]) {
-      if (importedImages.length === 0) {
-        return;
-      }
+    const addImages = Effect.fn("ImageImportService.addImages")(function* (options: AddImagesOptions) {
+      const importedImages = yield* importImages({
+        files: Array.from(options.files),
+        projectId: options.projectId,
+        nextOrder: getNextOrder(options.currentImages),
+      });
 
       yield* Effect.tryPromise({
         try: () =>
@@ -102,20 +103,11 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
       });
     });
 
-    const addImages = Effect.fn("addImages")(function* (options: AddImagesOptions) {
-      const importedImages = yield* importImages({
-        files: Array.from(options.files),
-        projectId: options.projectId,
-        nextOrder: getNextOrder(options.currentImages),
-      });
-
-      yield* saveImportedImages(importedImages);
-    });
-
     return { addImages };
   }),
 }) {
   static readonly layer = Layer.effect(ImageImportService, ImageImportService.make).pipe(
     Layer.provide(MemoryEstimationService.layer),
+    Layer.provide(UUIDService.layer),
   );
 }

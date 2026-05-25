@@ -8,14 +8,10 @@ interface ImageBlobOptions {
 
 export interface ImportImageBlobs {
   optimizedBlob?: Blob;
-  optimizedDimensions: { width: number; height: number };
 }
 
 function getOptimizedDimensions(options: ImageBlobOptions) {
-  const scale = Math.min(
-    1,
-    Math.sqrt(MAX_OPTIMIZED_IMAGE_PIXELS / (options.bitmap.width * options.bitmap.height)),
-  );
+  const scale = Math.min(1, Math.sqrt(MAX_OPTIMIZED_IMAGE_PIXELS / (options.bitmap.width * options.bitmap.height)));
 
   return {
     width: Math.max(1, Math.round(options.bitmap.width * scale)),
@@ -59,11 +55,9 @@ async function resizeBitmapToBlob(bitmap: ImageBitmap, target: { width: number; 
 export async function createImportImageBlobs(options: ImageBlobOptions): Promise<ImportImageBlobs> {
   const optimizedDimensions = getOptimizedDimensions(options);
   const shouldResize =
-    optimizedDimensions.width !== options.bitmap.width ||
-    optimizedDimensions.height !== options.bitmap.height;
+    optimizedDimensions.width !== options.bitmap.width || optimizedDimensions.height !== options.bitmap.height;
 
   return {
     optimizedBlob: shouldResize ? await resizeBitmapToBlob(options.bitmap, optimizedDimensions) : undefined,
-    optimizedDimensions,
   };
 }
