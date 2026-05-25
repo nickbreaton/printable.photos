@@ -2,8 +2,7 @@ import { Context, DateTime, Effect, Layer, Schema, Semaphore } from "effect";
 
 import { database, type CropCoordinates } from "../data";
 import { createImportImageBlobs } from "../imageResize";
-
-const MAX_IMPORT_BYTES = 100 * 1024 * 1024; // 100 MiB
+import { MemoryEstimationService } from "./MemoryEstimationService";
 
 class ImageImportError extends Schema.TaggedErrorClass<ImageImportError>()("ImageImportError", {
   fileName: Schema.String,
@@ -53,15 +52,29 @@ function getNextOrder(images: readonly { order: number }[]) {
   return images.reduce((maxOrder, image) => Math.max(maxOrder, image.order), -1) + 1;
 }
 
+interface ImportImageOptions {
+  file: File;
+  projectId: string;
+  order: number;
+}
+
+interface ImportImagesOptions {
+  files: File[];
+  projectId: string;
+  nextOrder: number;
+}
+
 interface AddImagesOptions {
   files: FileList;
   projectId: string;
   currentImages: readonly { order: number }[];
 }
 
-export class ImageImportService extends Context.Service<ImageImportService>()("printablePhotos/services/ImageImportService", {
+export class ImageImportService extends Context.Service<ImageImportService>()("ImageImportService", {
   make: Effect.gen(function* () {
-    const importImage = Effect.fn("ImageImportService.importImage")(function* (options: { file: File; projectId: string; order: number }) {
+    const memoryEstimationService = yield* MemoryEstimationService;
+
+    const importImage = Effect.fn("importImage")(function* (options: ImportImageOptions) {
       const bitmap = yield* Effect.acquireRelease(
         Effect.tryPromise({
           try: () => createImageBitmap(options.file),
@@ -94,16 +107,13 @@ export class ImageImportService extends Context.Service<ImageImportService>()("p
       });
     }, Effect.scoped);
 
-    const importImages = Effect.fn("ImageImportService.importImages")(function* (options: {
-      files: File[];
-      projectId: string;
-      nextOrder: number;
-    }) {
-      const byteSemaphore = yield* Semaphore.make(MAX_IMPORT_BYTES);
+    const importImages = Effect.fn("importImages")(function* (options: ImportImagesOptions) {
+      const maxImportBytes = yield* memoryEstimationService.estimate();
+      const byteSemaphore = yield* Semaphore.make(maxImportBytes);
 
       return yield* Effect.all(
         options.files.map((file, index) =>
-          byteSemaphore.withPermits(Math.min(file.size, MAX_IMPORT_BYTES))(
+          byteSemaphore.withPermits(Math.min(file.size, maxImportBytes))(
             importImage({
               file,
               projectId: options.projectId,
@@ -115,7 +125,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("p
       );
     });
 
-    const saveImportedImages = Effect.fn("ImageImportService.saveImportedImages")(function* (importedImages: ImportedImage[]) {
+    const saveImportedImages = Effect.fn("saveImportedImages")(function* (importedImages: ImportedImage[]) {
       if (importedImages.length === 0) {
         return;
       }
@@ -130,7 +140,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("p
       });
     });
 
-    const addImages = Effect.fn("ImageImportService.addImages")(function* (options: AddImagesOptions) {
+    const addImages = Effect.fn("addImages")(function* (options: AddImagesOptions) {
       const importedImages = yield* importImages({
         files: Array.from(options.files),
         projectId: options.projectId,
@@ -140,8 +150,10 @@ export class ImageImportService extends Context.Service<ImageImportService>()("p
       yield* saveImportedImages(importedImages);
     });
 
-    return { addImages } as const;
+    return { addImages };
   }),
 }) {
-  static readonly layer = Layer.effect(ImageImportService, ImageImportService.make);
+  static readonly layer = Layer.effect(ImageImportService, ImageImportService.make).pipe(
+    Layer.provide(MemoryEstimationService.layer),
+  );
 }
