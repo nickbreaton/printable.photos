@@ -1,3 +1,4 @@
+// Keep pdf-lib behind a dynamic import; it is only needed for PDF downloads.
 import { PDFDocument } from "pdf-lib";
 import type { PackedImageBin } from "../layout";
 import {

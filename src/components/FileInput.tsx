@@ -1,8 +1,6 @@
 import { omit } from "solid-js";
 import type { JSX } from "@solidjs/web";
 
-import { cn } from "../utils";
-
 export interface FileInputProps
   extends JSX.InputHTMLAttributes<HTMLInputElement> {
   children?: JSX.Element;
@@ -18,7 +16,7 @@ export function FileInput(props: FileInputProps) {
         {...inputProps}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/avif,image/gif,.jpg,.jpeg,.png,.webp,.avif,.gif"
-        class={cn("absolute inset-0 opacity-0 appearance-none", props.class)}
+        class={["absolute inset-0 opacity-0 appearance-none", props.class]}
       />
     </label>
   );

@@ -2,7 +2,6 @@ import { createMemo, createRenderEffect, createSignal, For, onCleanup, snapshot 
 import type { Rectangle } from "maxrects-packer";
 
 import type { ProjectImage } from "../data";
-import { cn } from "../utils";
 import { getCropAspectRatio, getImageViewBoxWidth, type CropRect } from "../crop";
 
 const MIN_CROP_SCREEN_PX = 100;
@@ -611,10 +610,10 @@ export function ImagePreview(props: {
   return (
     <div
       ref={setContainerRef}
-      class={cn(
+      class={[
         "relative min-h-full max-w-full [dynamic-range-limit:standard] text-foreground",
         props.class,
-      )}
+      ]}
       style={{
         "aspect-ratio": props.image.width / props.image.height,
       }}

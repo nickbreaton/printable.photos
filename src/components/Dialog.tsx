@@ -1,5 +1,4 @@
 import { Loading, type JSX } from "@solidjs/web";
-import { cn } from "../utils";
 
 export interface DialogProps {
   ref: (el: HTMLDialogElement) => void;
@@ -29,10 +28,10 @@ export function Dialog(props: DialogProps) {
     <Loading>
       <dialog
         ref={props.ref}
-        class={cn(
+        class={[
           "m-auto grid max-h-[calc(100dvh-2.5rem)] gap-4 border bg-background p-6 shadow-lg backdrop:bg-black/80 sm:rounded-lg [&:not([open])]:hidden",
           props.class,
-        )}
+        ]}
         onPointerDown={(event) => {
           isBackdropPointerDown = isBackdropPointerEvent(event);
         }}

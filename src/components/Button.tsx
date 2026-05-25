@@ -2,8 +2,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { omit } from "solid-js";
 import type { JSX } from "@solidjs/web";
 
-import { cn } from "../utils";
-
 const buttonVariants = cva(
   "inline-flex h-9 min-w-24 select-none items-center justify-center border px-3 py-2 text-sm font-medium outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
   {
@@ -36,13 +34,13 @@ export function Button(props: ButtonProps) {
   return (
     <button
       {...buttonProps}
-      class={cn(
+      class={[
         buttonVariants({
           variant: props.variant,
           activeTransform: props.activeTransform,
         }),
         props.class,
-      )}
+      ]}
     />
   );
 }

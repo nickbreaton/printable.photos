@@ -4,8 +4,6 @@ import type { JSX } from "@solidjs/web";
 import "./style.css";
 import { Button } from "./components/Button";
 import { Checkbox } from "./components/Checkbox";
-import { downloadPdfFromCurrentLayout } from "./download/pdf";
-import { downloadPhotosFromCurrentLayout } from "./download/photos";
 import { FieldLabel } from "./components/FieldLabel";
 import { Dialog } from "./components/Dialog";
 import { Dropdown } from "./components/Dropdown";
@@ -424,6 +422,7 @@ function DownloadControls() {
         disabled={downloading()}
         onClick={action(function* () {
           setDownloading(true);
+          const { downloadPhotosFromCurrentLayout } = yield import("./download/photos");
           yield downloadPhotosFromCurrentLayout({
             bins: [...bins],
             paper: paper(),
@@ -439,6 +438,7 @@ function DownloadControls() {
         disabled={downloading()}
         onClick={action(function* () {
           setDownloading(true);
+          const { downloadPdfFromCurrentLayout } = yield import("./download/pdf");
           yield downloadPdfFromCurrentLayout({
             bins: [...bins],
             paper: paper(),

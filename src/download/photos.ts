@@ -1,3 +1,4 @@
+// Keep fflate behind a dynamic import; it is only needed for ZIP photo downloads.
 import { zipSync } from "fflate";
 import type { PackedImageBin } from "../layout";
 import {
