@@ -16,7 +16,7 @@ A second large change is createEffect's first function now must be pure to suppo
 
 Be sure not to destructure props, thats a big no.
 
-See [docs/SOLID_2.md](docs/SOLID_2.md) for repo-specific Solid 2.0 migration notes and current beta caveats.
+When writing Solid 2.0 code, inspect @repos/solid/ for examples, tests, migration notes, and API behavior. Treat it as the source of truth for Solid patterns.
 
 ### Effect
 

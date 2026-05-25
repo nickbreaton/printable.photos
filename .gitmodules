@@ -1,3 +1,7 @@
 [submodule "repos/effect"]
 	path = repos/effect
 	url = https://github.com/Effect-TS/effect-smol.git
+[submodule "repos/solid"]
+	path = repos/solid
+	url = https://github.com/solidjs/solid.git
+	branch = next
