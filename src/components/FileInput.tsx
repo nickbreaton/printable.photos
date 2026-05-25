@@ -17,7 +17,7 @@ export function FileInput(props: FileInputProps) {
       <input
         {...inputProps}
         type="file"
-        accept=".jpg,.jpeg,.png,.heic"
+        accept="image/jpeg,image/png,image/webp,image/avif,image/gif,.jpg,.jpeg,.png,.webp,.avif,.gif"
         class={cn("absolute inset-0 opacity-0 appearance-none", props.class)}
       />
     </label>
