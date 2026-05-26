@@ -1,3 +1,3 @@
 # printable.photos
 
-Optimally print right-sized photos on right-sized paper.
+Lay out photos at exact print sizes, pack them onto paper, and export print-ready pages.
