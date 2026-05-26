@@ -29,18 +29,15 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {}
 
 export function Button(props: ButtonProps) {
-  const buttonProps = omit(props, "activeTransform", "class", "variant");
+  const buttonProps = omit(props, "activeTransform", "variant");
 
   return (
     <button
       {...buttonProps}
-      class={[
-        buttonVariants({
-          variant: props.variant,
-          activeTransform: props.activeTransform,
-        }),
-        props.class,
-      ]}
+      class={buttonVariants({
+        variant: props.variant,
+        activeTransform: props.activeTransform,
+      })}
     />
   );
 }
