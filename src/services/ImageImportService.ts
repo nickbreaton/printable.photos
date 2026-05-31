@@ -5,6 +5,7 @@ import { DatabaseWriteError, ImageImportError, ImportedImageSchema } from "../sc
 import { MemoryEstimationService } from "./MemoryEstimationService";
 import { ImageOptimizationService } from "./ImageOptimizationService";
 import { UUIDService } from "./UUIDService";
+import { WebGraphicsService } from "./WebGraphicsService";
 
 function getNextOrder(images: readonly { order: number }[]) {
   return images.reduce((maxOrder, image) => Math.max(maxOrder, image.order), -1) + 1;
@@ -33,13 +34,13 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
     const memoryEstimationService = yield* MemoryEstimationService;
     const imageOptimizationService = yield* ImageOptimizationService;
     const { randomUUID } = yield* UUIDService;
+    const webGraphicsService = yield* WebGraphicsService;
 
     const importImage = Effect.fn("ImageImportService.importImage")(function* (options: ImportImageOptions) {
       const bitmap = yield* Effect.acquireRelease(
-        Effect.tryPromise({
-          try: () => createImageBitmap(options.file),
-          catch: (cause) => new ImageImportError({ fileName: options.file.name, cause }),
-        }),
+        webGraphicsService
+          .createImageBitmap(options.file)
+          .pipe(Effect.mapError((cause) => new ImageImportError({ fileName: options.file.name, cause }))),
         (bitmap) => Effect.sync(() => bitmap.close()),
       );
 
@@ -110,5 +111,6 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
     Layer.provide(MemoryEstimationService.layer),
     Layer.provide(ImageOptimizationService.layer),
     Layer.provide(UUIDService.layer),
+    Layer.provide(WebGraphicsService.layer),
   );
 }

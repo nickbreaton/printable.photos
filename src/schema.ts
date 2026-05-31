@@ -16,6 +16,17 @@ export class OptimizeImageCanvasContextError extends Schema.TaggedErrorClass<Opt
   {},
 ) {}
 
+export class CanvasContextError extends Schema.TaggedErrorClass<CanvasContextError>()("CanvasContextError", {}) {}
+
+export class CanvasBlobEncodeError extends Schema.TaggedErrorClass<CanvasBlobEncodeError>()(
+  "CanvasBlobEncodeError",
+  {},
+) {}
+
+export class CreateImageBitmapError extends Schema.TaggedErrorClass<CreateImageBitmapError>()("CreateImageBitmapError", {
+  cause: Schema.Defect,
+}) {}
+
 export class OptimizeImageBlobError extends Schema.TaggedErrorClass<OptimizeImageBlobError>()(
   "OptimizeImageBlobError",
   {},
@@ -28,22 +39,9 @@ export class DownloadMissingImageError extends Schema.TaggedErrorClass<DownloadM
   },
 ) {}
 
-export class DownloadImageBitmapError extends Schema.TaggedErrorClass<DownloadImageBitmapError>()(
-  "DownloadImageBitmapError",
-  {
-    cause: Schema.Defect,
-  },
-) {}
-
-export class DownloadCanvasContextError extends Schema.TaggedErrorClass<DownloadCanvasContextError>()(
-  "DownloadCanvasContextError",
-  {},
-) {}
-
-export class DownloadCanvasEncodeError extends Schema.TaggedErrorClass<DownloadCanvasEncodeError>()(
-  "DownloadCanvasEncodeError",
-  {},
-) {}
+export class DownloadEncodeError extends Schema.TaggedErrorClass<DownloadEncodeError>()("DownloadEncodeError", {
+  cause: Schema.Defect,
+}) {}
 
 export const CropCoordinatesSchema: Schema.Codec<CropCoordinates> = Schema.Struct({
   x: Schema.Number,

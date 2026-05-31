@@ -3,12 +3,8 @@ import { Context, Effect, Layer } from "effect";
 import { computeInitialCrop, cropFromPercentages, cropToSourcePixels, getCropKey } from "../crop";
 import { database, type CropCoordinates } from "../data";
 import type { PackedImageBin, PackedImageRectangle } from "../layout";
-import {
-  DownloadCanvasContextError,
-  DownloadCanvasEncodeError,
-  DownloadImageBitmapError,
-  DownloadMissingImageError,
-} from "../schema";
+import { DownloadEncodeError, DownloadMissingImageError } from "../schema";
+import { WebGraphicsService } from "./WebGraphicsService";
 
 const EXPORT_DPI = 300;
 
@@ -72,35 +68,6 @@ function imageMeetsExportDpi(
   return crop.cropWidth >= preRotationWidth && crop.cropHeight >= preRotationHeight;
 }
 
-function createCanvas(width: number, height: number) {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  return canvas;
-}
-
-function get2dContext(canvas: HTMLCanvasElement) {
-  const context = canvas.getContext("2d");
-
-  return context ? Effect.succeed(context) : Effect.fail(new DownloadCanvasContextError());
-}
-
-function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number) {
-  return Effect.callback<Blob, DownloadCanvasEncodeError>((resume) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) {
-          resume(Effect.succeed(blob));
-        } else {
-          resume(Effect.fail(new DownloadCanvasEncodeError()));
-        }
-      },
-      type,
-      quality,
-    );
-  });
-}
-
 function getDownloadFilename(projectName: string, extension: string) {
   const safeName = projectName
     .trim()
@@ -137,6 +104,8 @@ function getOutputMimeType(image: DownloadImage) {
 
 export class DownloadService extends Context.Service<DownloadService>()("DownloadService", {
   make: Effect.gen(function* () {
+    const webGraphicsService = yield* WebGraphicsService;
+
     const renderImageForRect = Effect.fn("DownloadService.renderImageForRect")(function* (
       image: DownloadImage,
       rect: PackedImageRectangle,
@@ -150,36 +119,37 @@ export class DownloadService extends Context.Service<DownloadService>()("Downloa
         : yield* Effect.promise(() => database.originalImages.get(image.id));
       const sourceBlob = originalImage?.blob ?? image.blob;
       const sourceBitmap = yield* Effect.acquireRelease(
-        Effect.tryPromise({
-          try: () => createImageBitmap(sourceBlob),
-          catch: (cause) => new DownloadImageBitmapError({ cause }),
-        }),
+        webGraphicsService
+          .createImageBitmap(sourceBlob)
+          .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause }))),
         (bitmap) => Effect.sync(() => bitmap.close()),
       );
       const { cropX, cropY, cropWidth, cropHeight } = getSourceCropBounds(image, rect, sourceBitmap);
-      const fittedBitmap = yield* Effect.acquireRelease(
-        Effect.tryPromise({
-          try: () =>
-            createImageBitmap(sourceBitmap, cropX, cropY, cropWidth, cropHeight, {
-              resizeWidth: preRotationWidth,
-              resizeHeight: preRotationHeight,
-              resizeQuality: "high",
-            }),
-          catch: (cause) => new DownloadImageBitmapError({ cause }),
-        }),
-        (bitmap) => Effect.sync(() => bitmap.close()),
-      );
-      const fittedCanvas = createCanvas(preRotationWidth, preRotationHeight);
-      const fittedContext = yield* get2dContext(fittedCanvas);
+      const { canvas: fittedCanvas, context: fittedContext } = yield* webGraphicsService
+        .createCanvas(preRotationWidth, preRotationHeight)
+        .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
 
-      fittedContext.drawImage(fittedBitmap, 0, 0, fittedCanvas.width, fittedCanvas.height);
+      fittedContext.imageSmoothingEnabled = true;
+      fittedContext.imageSmoothingQuality = "high";
+      fittedContext.drawImage(
+        sourceBitmap,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        fittedCanvas.width,
+        fittedCanvas.height,
+      );
 
       if (!rect.rot) {
         return fittedCanvas;
       }
 
-      const rotatedCanvas = createCanvas(targetWidthPx, targetHeightPx);
-      const rotatedContext = yield* get2dContext(rotatedCanvas);
+      const { canvas: rotatedCanvas, context: rotatedContext } = yield* webGraphicsService
+        .createCanvas(targetWidthPx, targetHeightPx)
+        .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
 
       rotatedContext.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
       rotatedContext.rotate(Math.PI / 2);
@@ -195,8 +165,9 @@ export class DownloadService extends Context.Service<DownloadService>()("Downloa
     ) {
       const pageWidthPx = Math.max(1, Math.ceil(toInches(paper.width, paper.units) * EXPORT_DPI));
       const pageHeightPx = Math.max(1, Math.ceil(toInches(paper.height, paper.units) * EXPORT_DPI));
-      const pageCanvas = createCanvas(pageWidthPx, pageHeightPx);
-      const pageContext = yield* get2dContext(pageCanvas);
+      const { canvas: pageCanvas, context: pageContext } = yield* webGraphicsService
+        .createCanvas(pageWidthPx, pageHeightPx)
+        .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
 
       pageContext.fillStyle = "#ffffff";
       pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
@@ -231,7 +202,9 @@ export class DownloadService extends Context.Service<DownloadService>()("Downloa
         options.bins.map((bin) =>
           Effect.gen(function* () {
             const canvas = yield* renderPageCanvas(bin, imagesById, options.paper);
-            return yield* canvasToBlob(canvas, "image/jpeg", 1);
+            return yield* webGraphicsService
+              .encodeCanvas(canvas, "image/jpeg", 1)
+              .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
           }),
         ),
       );
@@ -276,7 +249,9 @@ export class DownloadService extends Context.Service<DownloadService>()("Downloa
           const targetHeightPx = Math.max(1, Math.ceil(placedHeightInches * EXPORT_DPI));
           const canvas = yield* renderImageForRect(image, rect, targetWidthPx, targetHeightPx);
           const mimeType = getOutputMimeType(image);
-          const blob = yield* canvasToBlob(canvas, mimeType, mimeType === "image/jpeg" ? 1 : undefined);
+          const blob = yield* webGraphicsService
+            .encodeCanvas(canvas, mimeType, 1)
+            .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
           const bytes = yield* Effect.promise(() => blob.arrayBuffer());
           const embeddedImage = yield* Effect.promise(() =>
             mimeType === "image/png" ? pdf.embedPng(bytes) : pdf.embedJpg(bytes),
@@ -304,5 +279,7 @@ export class DownloadService extends Context.Service<DownloadService>()("Downloa
     return { downloadPhotoZip, downloadPDF };
   }),
 }) {
-  static readonly layer = Layer.effect(DownloadService, DownloadService.make);
+  static readonly layer = Layer.effect(DownloadService, DownloadService.make).pipe(
+    Layer.provide(WebGraphicsService.layer),
+  );
 }
