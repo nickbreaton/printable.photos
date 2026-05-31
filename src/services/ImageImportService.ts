@@ -37,12 +37,9 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
     const webGraphicsService = yield* WebGraphicsService;
 
     const importImage = Effect.fn("ImageImportService.importImage")(function* (options: ImportImageOptions) {
-      const bitmap = yield* Effect.acquireRelease(
-        webGraphicsService
-          .createImageBitmap(options.file)
-          .pipe(Effect.mapError((cause) => new ImageImportError({ fileName: options.file.name, cause }))),
-        (bitmap) => Effect.sync(() => bitmap.close()),
-      );
+      const bitmap = yield* webGraphicsService
+        .createImageBitmap(options.file)
+        .pipe(Effect.mapError((cause) => new ImageImportError({ fileName: options.file.name, cause })));
 
       const optimizedBlob = yield* imageOptimizationService
         .optimize(bitmap)
@@ -67,7 +64,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
         },
         originalImage: { imageId, blob: options.file },
       });
-    }, Effect.scoped);
+    });
 
     const importImages = Effect.fn("ImageImportService.importImages")(function* (options: ImportImagesOptions) {
       const maxImportBytes = yield* memoryEstimationService.estimate();
@@ -102,7 +99,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
           }),
         catch: (cause) => new DatabaseWriteError({ cause }),
       });
-    });
+    }, Effect.scoped);
 
     return { addImages };
   }),

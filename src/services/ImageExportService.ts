@@ -114,12 +114,9 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
         ? undefined
         : yield* Effect.promise(() => database.originalImages.get(image.id));
       const sourceBlob = originalImage?.blob ?? image.blob;
-      const sourceBitmap = yield* Effect.acquireRelease(
-        webGraphicsService
-          .createImageBitmap(sourceBlob)
-          .pipe(Effect.mapError((cause) => new ExportEncodeError({ cause }))),
-        (bitmap) => Effect.sync(() => bitmap.close()),
-      );
+      const sourceBitmap = yield* webGraphicsService
+        .createImageBitmap(sourceBlob)
+        .pipe(Effect.mapError((cause) => new ExportEncodeError({ cause })));
       const { cropX, cropY, cropWidth, cropHeight } = getSourceCropBounds(image, rect, sourceBitmap);
       const { canvas: fittedCanvas, context: fittedContext } = yield* webGraphicsService
         .createCanvas(preRotationWidth, preRotationHeight)
@@ -152,7 +149,7 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
       rotatedContext.drawImage(fittedCanvas, -fittedCanvas.width / 2, -fittedCanvas.height / 2);
 
       return rotatedCanvas;
-    }, Effect.scoped);
+    });
 
     const renderPageCanvas = Effect.fn("ImageExportService.renderPageCanvas")(function* (
       bin: PackedImageBin,
@@ -222,7 +219,7 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
       const output = new Blob([toArrayBuffer(zipped)], { type: "application/zip" });
 
       yield* exportBlob(output, getExportFilename(options.projectName, "zip"));
-    });
+    }, Effect.scoped);
 
     return { exportImageZip, renderImageForRect, renderPageCanvas };
   }),

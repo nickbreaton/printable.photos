@@ -69,7 +69,7 @@ export class PdfExportService extends Context.Service<PdfExportService>()("PdfEx
       const output = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
 
       yield* exportBlob(output, getExportFilename(options.projectName, "pdf"));
-    });
+    }, Effect.scoped);
 
     return { exportPDF };
   }),

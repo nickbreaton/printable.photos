@@ -39,7 +39,7 @@ export class ImageOptimizationService extends Context.Service<ImageOptimizationS
       return yield* webGraphicsService
         .encodeCanvas(canvas, "image/jpeg", JPEG_QUALITY)
         .pipe(Effect.mapError(() => new OptimizeImageBlobError()));
-    }, Effect.scoped);
+    });
 
     return { optimize };
   }),

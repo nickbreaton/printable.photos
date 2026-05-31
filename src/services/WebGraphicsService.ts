@@ -16,6 +16,13 @@ export class WebGraphicsService extends Context.Service<WebGraphicsService>()("W
         return yield* new CanvasContextError();
       }
 
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          canvas.width = 0;
+          canvas.height = 0;
+        }),
+      );
+
       return { canvas, context };
     });
 
@@ -34,10 +41,16 @@ export class WebGraphicsService extends Context.Service<WebGraphicsService>()("W
     });
 
     const createImageBitmap = Effect.fn("WebGraphicsService.createImageBitmap")(function* (source: ImageBitmapSource) {
-      return yield* Effect.tryPromise({
+      const bitmap = yield* Effect.tryPromise({
         try: () => window.createImageBitmap(source),
         catch: (cause) => new CreateImageBitmapError({ cause }),
       });
+
+      yield* Effect.addFinalizer(() => {
+        return Effect.sync(() => bitmap.close());
+      });
+
+      return bitmap;
     });
 
     return { createCanvas, createImageBitmap, encodeCanvas };
