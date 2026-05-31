@@ -427,7 +427,7 @@ function DownloadControls() {
           setDownloading(true);
           yield runtime.runPromise(
             ImageExportService.use((service) =>
-              service.downloadPhotoZip({
+              service.exportImageZip({
                 bins: [...bins],
                 paper: paper(),
                 images: [...snapshot(projectImages)],
@@ -446,7 +446,7 @@ function DownloadControls() {
           setDownloading(true);
           yield runtime.runPromise(
             PdfExportService.use((service) =>
-              service.downloadPDF({
+              service.exportPDF({
                 bins: [...bins],
                 paper: paper(),
                 images: [...snapshot(projectImages)],

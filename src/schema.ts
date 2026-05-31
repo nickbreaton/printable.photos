@@ -32,14 +32,14 @@ export class OptimizeImageBlobError extends Schema.TaggedErrorClass<OptimizeImag
   {},
 ) {}
 
-export class DownloadMissingImageError extends Schema.TaggedErrorClass<DownloadMissingImageError>()(
-  "DownloadMissingImageError",
+export class ExportMissingImageError extends Schema.TaggedErrorClass<ExportMissingImageError>()(
+  "ExportMissingImageError",
   {
     imageId: Schema.String,
   },
 ) {}
 
-export class DownloadEncodeError extends Schema.TaggedErrorClass<DownloadEncodeError>()("DownloadEncodeError", {
+export class ExportEncodeError extends Schema.TaggedErrorClass<ExportEncodeError>()("ExportEncodeError", {
   cause: Schema.Defect,
 }) {}
 

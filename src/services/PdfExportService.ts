@@ -1,18 +1,18 @@
 import { Context, Effect, Layer } from "effect";
 
-import { DownloadEncodeError, DownloadMissingImageError } from "../schema";
+import { ExportEncodeError, ExportMissingImageError } from "../schema";
 import { WebGraphicsService } from "./WebGraphicsService";
 import {
-  downloadBlob,
+  exportBlob,
   EXPORT_DPI,
   type ExportFromCurrentLayoutOptions,
-  getDownloadFilename,
-  type DownloadImage,
+  getExportFilename,
+  type ExportImage,
   ImageExportService,
   toInches,
 } from "./ImageExportService";
 
-function getOutputMimeType(image: DownloadImage) {
+function getOutputMimeType(image: ExportImage) {
   return image.type === "image/png" || image.blob.type === "image/png" ? "image/png" : "image/jpeg";
 }
 
@@ -21,7 +21,7 @@ export class PdfExportService extends Context.Service<PdfExportService>()("PdfEx
     const webGraphicsService = yield* WebGraphicsService;
     const imageExportService = yield* ImageExportService;
 
-    const downloadPDF = Effect.fn("PdfExportService.downloadPDF")(function* (options: ExportFromCurrentLayoutOptions) {
+    const exportPDF = Effect.fn("PdfExportService.exportPDF")(function* (options: ExportFromCurrentLayoutOptions) {
       const { PDFDocument } = yield* Effect.promise(() => import("pdf-lib"));
       const pdf = yield* Effect.promise(() => PDFDocument.create());
       const imagesById = new Map(options.images.map((image) => [image.id, image]));
@@ -35,7 +35,7 @@ export class PdfExportService extends Context.Service<PdfExportService>()("PdfEx
           const image = imagesById.get(rect.data.id);
 
           if (!image) {
-            return yield* new DownloadMissingImageError({ imageId: rect.data.id });
+            return yield* new ExportMissingImageError({ imageId: rect.data.id });
           }
 
           const placedWidthInches = toInches(rect.width, options.paper.units);
@@ -46,7 +46,7 @@ export class PdfExportService extends Context.Service<PdfExportService>()("PdfEx
           const mimeType = getOutputMimeType(image);
           const blob = yield* webGraphicsService
             .encodeCanvas(canvas, mimeType, 1)
-            .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
+            .pipe(Effect.mapError((cause) => new ExportEncodeError({ cause })));
           const bytes = yield* Effect.promise(() => blob.arrayBuffer());
           const embeddedImage = yield* Effect.promise(() =>
             mimeType === "image/png" ? pdf.embedPng(bytes) : pdf.embedJpg(bytes),
@@ -68,10 +68,10 @@ export class PdfExportService extends Context.Service<PdfExportService>()("PdfEx
       const bytes = yield* Effect.promise(() => pdf.save());
       const output = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
 
-      yield* downloadBlob(output, getDownloadFilename(options.projectName, "pdf"));
+      yield* exportBlob(output, getExportFilename(options.projectName, "pdf"));
     });
 
-    return { downloadPDF };
+    return { exportPDF };
   }),
 }) {
   static readonly layer = Layer.effect(PdfExportService, PdfExportService.make).pipe(

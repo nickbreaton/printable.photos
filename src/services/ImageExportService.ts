@@ -3,7 +3,7 @@ import { Context, Effect, Layer } from "effect";
 import { computeInitialCrop, cropFromPercentages, cropToSourcePixels, getCropKey } from "../crop";
 import { database, type CropCoordinates } from "../data";
 import type { PackedImageBin, PackedImageRectangle } from "../layout";
-import { DownloadEncodeError, DownloadMissingImageError } from "../schema";
+import { ExportEncodeError, ExportMissingImageError } from "../schema";
 import { WebGraphicsService } from "./WebGraphicsService";
 
 export const EXPORT_DPI = 300;
@@ -14,7 +14,7 @@ export interface PaperLayout {
   units: "in" | "mm";
 }
 
-export interface DownloadImage {
+export interface ExportImage {
   id: string;
   width: number;
   height: number;
@@ -26,7 +26,7 @@ export interface DownloadImage {
 export interface ExportFromCurrentLayoutOptions {
   bins: PackedImageBin[];
   paper: PaperLayout;
-  images: DownloadImage[];
+  images: ExportImage[];
   projectName: string;
 }
 
@@ -34,7 +34,7 @@ export function toInches(value: number, units: PaperLayout["units"]) {
   return units === "mm" ? value / 25.4 : value;
 }
 
-function getPlacedCrop(image: DownloadImage, rect: PackedImageRectangle, source: { width: number; height: number }) {
+function getPlacedCrop(image: ExportImage, rect: PackedImageRectangle, source: { width: number; height: number }) {
   const savedCrop = image.crops?.[getCropKey(rect)];
 
   return savedCrop
@@ -43,7 +43,7 @@ function getPlacedCrop(image: DownloadImage, rect: PackedImageRectangle, source:
 }
 
 function getSourceCropBounds(
-  image: DownloadImage,
+  image: ExportImage,
   rect: PackedImageRectangle,
   source: { width: number; height: number },
 ) {
@@ -58,7 +58,7 @@ function getSourceCropBounds(
 }
 
 function imageMeetsExportDpi(
-  image: DownloadImage,
+  image: ExportImage,
   rect: PackedImageRectangle,
   preRotationWidth: number,
   preRotationHeight: number,
@@ -68,7 +68,7 @@ function imageMeetsExportDpi(
   return crop.cropWidth >= preRotationWidth && crop.cropHeight >= preRotationHeight;
 }
 
-export function getDownloadFilename(projectName: string, extension: string) {
+export function getExportFilename(projectName: string, extension: string) {
   const safeName = projectName
     .trim()
     .replace(/[\\/:*?"<>|]+/g, "-")
@@ -78,7 +78,7 @@ export function getDownloadFilename(projectName: string, extension: string) {
   return `${safeName || "printable-photos"}.${extension}`;
 }
 
-export function downloadBlob(blob: Blob, filename: string) {
+export function exportBlob(blob: Blob, filename: string) {
   return Effect.sync(() => {
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -103,7 +103,7 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
     const webGraphicsService = yield* WebGraphicsService;
 
     const renderImageForRect = Effect.fn("ImageExportService.renderImageForRect")(function* (
-      image: DownloadImage,
+      image: ExportImage,
       rect: PackedImageRectangle,
       targetWidthPx: number,
       targetHeightPx: number,
@@ -117,13 +117,13 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
       const sourceBitmap = yield* Effect.acquireRelease(
         webGraphicsService
           .createImageBitmap(sourceBlob)
-          .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause }))),
+          .pipe(Effect.mapError((cause) => new ExportEncodeError({ cause }))),
         (bitmap) => Effect.sync(() => bitmap.close()),
       );
       const { cropX, cropY, cropWidth, cropHeight } = getSourceCropBounds(image, rect, sourceBitmap);
       const { canvas: fittedCanvas, context: fittedContext } = yield* webGraphicsService
         .createCanvas(preRotationWidth, preRotationHeight)
-        .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
+        .pipe(Effect.mapError((cause) => new ExportEncodeError({ cause })));
 
       fittedContext.imageSmoothingEnabled = true;
       fittedContext.imageSmoothingQuality = "high";
@@ -145,7 +145,7 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
 
       const { canvas: rotatedCanvas, context: rotatedContext } = yield* webGraphicsService
         .createCanvas(targetWidthPx, targetHeightPx)
-        .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
+        .pipe(Effect.mapError((cause) => new ExportEncodeError({ cause })));
 
       rotatedContext.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
       rotatedContext.rotate(Math.PI / 2);
@@ -156,14 +156,14 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
 
     const renderPageCanvas = Effect.fn("ImageExportService.renderPageCanvas")(function* (
       bin: PackedImageBin,
-      imagesById: Map<string, DownloadImage>,
+      imagesById: Map<string, ExportImage>,
       paper: PaperLayout,
     ) {
       const pageWidthPx = Math.max(1, Math.ceil(toInches(paper.width, paper.units) * EXPORT_DPI));
       const pageHeightPx = Math.max(1, Math.ceil(toInches(paper.height, paper.units) * EXPORT_DPI));
       const { canvas: pageCanvas, context: pageContext } = yield* webGraphicsService
         .createCanvas(pageWidthPx, pageHeightPx)
-        .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
+        .pipe(Effect.mapError((cause) => new ExportEncodeError({ cause })));
 
       pageContext.fillStyle = "#ffffff";
       pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
@@ -172,7 +172,7 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
         const image = imagesById.get(rect.data.id);
 
         if (!image) {
-          return yield* new DownloadMissingImageError({ imageId: rect.data.id });
+          return yield* new ExportMissingImageError({ imageId: rect.data.id });
         }
 
         const placedWidthInches = toInches(rect.width, paper.units);
@@ -189,7 +189,7 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
       return pageCanvas;
     });
 
-    const downloadPhotoZip = Effect.fn("ImageExportService.downloadPhotoZip")(function* (
+    const exportImageZip = Effect.fn("ImageExportService.exportImageZip")(function* (
       options: ExportFromCurrentLayoutOptions,
     ) {
       const { zipSync } = yield* Effect.promise(() => import("fflate"));
@@ -200,9 +200,10 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
             const canvas = yield* renderPageCanvas(bin, imagesById, options.paper);
             return yield* webGraphicsService
               .encodeCanvas(canvas, "image/jpeg", 1)
-              .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
+              .pipe(Effect.mapError((cause) => new ExportEncodeError({ cause })));
           }),
         ),
+        { concurrency: "unbounded" },
       );
       const files = Object.fromEntries(
         yield* Effect.all(
@@ -214,15 +215,16 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
               return [`page-${pageNumber}.jpg`, bytes] as const;
             }),
           ),
+          { concurrency: "unbounded" },
         ),
       );
       const zipped = zipSync(files, { level: 0 });
       const output = new Blob([toArrayBuffer(zipped)], { type: "application/zip" });
 
-      yield* downloadBlob(output, getDownloadFilename(options.projectName, "zip"));
+      yield* exportBlob(output, getExportFilename(options.projectName, "zip"));
     });
 
-    return { downloadPhotoZip, renderImageForRect, renderPageCanvas };
+    return { exportImageZip, renderImageForRect, renderPageCanvas };
   }),
 }) {
   static readonly layer = Layer.effect(ImageExportService, ImageExportService.make).pipe(
