@@ -1,9 +1,9 @@
 import { createMemo, createRenderEffect, createSignal, For, onCleanup, snapshot } from "solid-js";
 import type { Rectangle } from "maxrects-packer";
 
-import { arrayify } from "../classes";
-import type { ProjectImage } from "../data";
-import { getCropAspectRatio, getImageViewBoxWidth, type CropRect } from "../crop";
+import { arrayify } from "../../classes";
+import type { ProjectImage } from "../../data";
+import { getCropAspectRatio, getImageViewBoxWidth, type CropRect } from "../../crop";
 
 const MIN_CROP_SCREEN_PX = 100;
 

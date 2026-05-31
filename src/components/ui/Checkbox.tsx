@@ -1,7 +1,7 @@
 import { omit } from "solid-js";
 import type { JSX } from "@solidjs/web";
 
-import { arrayify } from "../classes";
+import { arrayify } from "../../classes";
 import { labelTextClass } from "./FieldLabel";
 
 type CheckboxProps = JSX.InputHTMLAttributes<HTMLInputElement> & {

@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 
-import { arrayify } from "../classes";
+import { arrayify } from "../../classes";
 
 export function SectionHeader(props: JSX.HTMLAttributes<HTMLHeadingElement>) {
   return (

@@ -2,7 +2,7 @@ import { omit } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { ChevronDown } from "lucide-static";
 
-import { arrayify } from "../classes";
+import { arrayify } from "../../classes";
 import { Icon } from "./Icon";
 
 export function Select(props: JSX.SelectHTMLAttributes<HTMLSelectElement>) {

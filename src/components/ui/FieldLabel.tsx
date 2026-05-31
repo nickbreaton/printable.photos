@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 
-import { arrayify } from "../classes";
+import { arrayify } from "../../classes";
 
 export const labelTextClass = "text-xs font-semibold uppercase tracking-tight";
 

@@ -1,6 +1,6 @@
 import { Loading, type JSX } from "@solidjs/web";
 
-import { arrayify } from "../classes";
+import { arrayify } from "../../classes";
 
 export interface DialogProps {
   ref: (el: HTMLDialogElement) => void;
