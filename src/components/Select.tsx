@@ -2,6 +2,7 @@ import { omit } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { ChevronDown } from "lucide-static";
 
+import { arrayify } from "../classes";
 import { Icon } from "./Icon";
 
 export function Select(props: JSX.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -11,7 +12,7 @@ export function Select(props: JSX.SelectHTMLAttributes<HTMLSelectElement>) {
         {...omit(props, "class")}
         class={[
           "flex h-9 w-full min-w-0 appearance-none rounded-none border border-input bg-input/30 px-3 py-2 pr-8 text-sm font-normal normal-case tracking-normal shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-          props.class,
+          ...arrayify(props.class),
         ]}
       />
       <Icon

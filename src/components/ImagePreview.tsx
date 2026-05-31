@@ -1,6 +1,7 @@
 import { createMemo, createRenderEffect, createSignal, For, onCleanup, snapshot } from "solid-js";
 import type { Rectangle } from "maxrects-packer";
 
+import { arrayify } from "../classes";
 import type { ProjectImage } from "../data";
 import { getCropAspectRatio, getImageViewBoxWidth, type CropRect } from "../crop";
 
@@ -612,7 +613,7 @@ export function ImagePreview(props: {
       ref={setContainerRef}
       class={[
         "relative min-h-full max-w-full [dynamic-range-limit:standard] text-foreground",
-        props.class,
+        ...arrayify(props.class),
       ]}
       style={{
         "aspect-ratio": props.image.width / props.image.height,

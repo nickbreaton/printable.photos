@@ -1,6 +1,7 @@
 import { omit } from "solid-js";
 import type { JSX } from "@solidjs/web";
 
+import { arrayify } from "../classes";
 import { labelTextClass } from "./FieldLabel";
 
 type CheckboxProps = JSX.InputHTMLAttributes<HTMLInputElement> & {
@@ -13,7 +14,7 @@ export function Checkbox(props: CheckboxProps) {
     <label
       class={[
         "group grid w-full grid-cols-[1fr_max-content] items-center gap-x-3 gap-y-1 text-sm font-medium leading-snug has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50",
-        props.class,
+        ...arrayify(props.class),
       ]}
     >
       <span class={["select-none", labelTextClass]}>{props.children}</span>
