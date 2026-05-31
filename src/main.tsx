@@ -57,7 +57,8 @@ import {
 } from "./state";
 import { Fonts } from "./components/Fonts";
 import { runtime } from "./runtime";
-import { DownloadService } from "./services/DownloadService";
+import { ImageExportService } from "./services/ImageExportService";
+import { PdfExportService } from "./services/PdfExportService";
 
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
@@ -425,7 +426,7 @@ function DownloadControls() {
         onClick={action(function* () {
           setDownloading(true);
           yield runtime.runPromise(
-            DownloadService.use((service) =>
+            ImageExportService.use((service) =>
               service.downloadPhotoZip({
                 bins: [...bins],
                 paper: paper(),
@@ -444,7 +445,7 @@ function DownloadControls() {
         onClick={action(function* () {
           setDownloading(true);
           yield runtime.runPromise(
-            DownloadService.use((service) =>
+            PdfExportService.use((service) =>
               service.downloadPDF({
                 bins: [...bins],
                 paper: paper(),

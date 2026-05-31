@@ -6,7 +6,7 @@ import type { PackedImageBin, PackedImageRectangle } from "../layout";
 import { DownloadEncodeError, DownloadMissingImageError } from "../schema";
 import { WebGraphicsService } from "./WebGraphicsService";
 
-const EXPORT_DPI = 300;
+export const EXPORT_DPI = 300;
 
 export interface PaperLayout {
   width: number;
@@ -23,14 +23,14 @@ export interface DownloadImage {
   crops: Record<string, CropCoordinates>;
 }
 
-interface DownloadFromCurrentLayoutOptions {
+export interface ExportFromCurrentLayoutOptions {
   bins: PackedImageBin[];
   paper: PaperLayout;
   images: DownloadImage[];
   projectName: string;
 }
 
-function toInches(value: number, units: PaperLayout["units"]) {
+export function toInches(value: number, units: PaperLayout["units"]) {
   return units === "mm" ? value / 25.4 : value;
 }
 
@@ -68,7 +68,7 @@ function imageMeetsExportDpi(
   return crop.cropWidth >= preRotationWidth && crop.cropHeight >= preRotationHeight;
 }
 
-function getDownloadFilename(projectName: string, extension: string) {
+export function getDownloadFilename(projectName: string, extension: string) {
   const safeName = projectName
     .trim()
     .replace(/[\\/:*?"<>|]+/g, "-")
@@ -78,7 +78,7 @@ function getDownloadFilename(projectName: string, extension: string) {
   return `${safeName || "printable-photos"}.${extension}`;
 }
 
-function downloadBlob(blob: Blob, filename: string) {
+export function downloadBlob(blob: Blob, filename: string) {
   return Effect.sync(() => {
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -98,15 +98,11 @@ function toArrayBuffer(bytes: Uint8Array) {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function getOutputMimeType(image: DownloadImage) {
-  return image.type === "image/png" || image.blob.type === "image/png" ? "image/png" : "image/jpeg";
-}
-
-export class DownloadService extends Context.Service<DownloadService>()("DownloadService", {
+export class ImageExportService extends Context.Service<ImageExportService>()("ImageExportService", {
   make: Effect.gen(function* () {
     const webGraphicsService = yield* WebGraphicsService;
 
-    const renderImageForRect = Effect.fn("DownloadService.renderImageForRect")(function* (
+    const renderImageForRect = Effect.fn("ImageExportService.renderImageForRect")(function* (
       image: DownloadImage,
       rect: PackedImageRectangle,
       targetWidthPx: number,
@@ -158,7 +154,7 @@ export class DownloadService extends Context.Service<DownloadService>()("Downloa
       return rotatedCanvas;
     }, Effect.scoped);
 
-    const renderPageCanvas = Effect.fn("DownloadService.renderPageCanvas")(function* (
+    const renderPageCanvas = Effect.fn("ImageExportService.renderPageCanvas")(function* (
       bin: PackedImageBin,
       imagesById: Map<string, DownloadImage>,
       paper: PaperLayout,
@@ -193,8 +189,8 @@ export class DownloadService extends Context.Service<DownloadService>()("Downloa
       return pageCanvas;
     });
 
-    const downloadPhotoZip = Effect.fn("DownloadService.downloadPhotoZip")(function* (
-      options: DownloadFromCurrentLayoutOptions,
+    const downloadPhotoZip = Effect.fn("ImageExportService.downloadPhotoZip")(function* (
+      options: ExportFromCurrentLayoutOptions,
     ) {
       const { zipSync } = yield* Effect.promise(() => import("fflate"));
       const imagesById = new Map(options.images.map((image) => [image.id, image]));
@@ -226,60 +222,10 @@ export class DownloadService extends Context.Service<DownloadService>()("Downloa
       yield* downloadBlob(output, getDownloadFilename(options.projectName, "zip"));
     });
 
-    const downloadPDF = Effect.fn("DownloadService.downloadPDF")(function* (options: DownloadFromCurrentLayoutOptions) {
-      const { PDFDocument } = yield* Effect.promise(() => import("pdf-lib"));
-      const pdf = yield* Effect.promise(() => PDFDocument.create());
-      const imagesById = new Map(options.images.map((image) => [image.id, image]));
-      const pageWidthPt = toInches(options.paper.width, options.paper.units) * 72;
-      const pageHeightPt = toInches(options.paper.height, options.paper.units) * 72;
-
-      for (const packedBin of options.bins) {
-        const page = pdf.addPage([pageWidthPt, pageHeightPt]);
-
-        for (const rect of packedBin.rects) {
-          const image = imagesById.get(rect.data.id);
-
-          if (!image) {
-            return yield* new DownloadMissingImageError({ imageId: rect.data.id });
-          }
-
-          const placedWidthInches = toInches(rect.width, options.paper.units);
-          const placedHeightInches = toInches(rect.height, options.paper.units);
-          const targetWidthPx = Math.max(1, Math.ceil(placedWidthInches * EXPORT_DPI));
-          const targetHeightPx = Math.max(1, Math.ceil(placedHeightInches * EXPORT_DPI));
-          const canvas = yield* renderImageForRect(image, rect, targetWidthPx, targetHeightPx);
-          const mimeType = getOutputMimeType(image);
-          const blob = yield* webGraphicsService
-            .encodeCanvas(canvas, mimeType, 1)
-            .pipe(Effect.mapError((cause) => new DownloadEncodeError({ cause })));
-          const bytes = yield* Effect.promise(() => blob.arrayBuffer());
-          const embeddedImage = yield* Effect.promise(() =>
-            mimeType === "image/png" ? pdf.embedPng(bytes) : pdf.embedJpg(bytes),
-          );
-          const rectXPt = toInches(rect.x, options.paper.units) * 72;
-          const rectYPt = pageHeightPt - (toInches(rect.y, options.paper.units) + placedHeightInches) * 72;
-          const rectWidthPt = placedWidthInches * 72;
-          const rectHeightPt = placedHeightInches * 72;
-
-          page.drawImage(embeddedImage, {
-            x: rectXPt,
-            y: rectYPt,
-            width: rectWidthPt,
-            height: rectHeightPt,
-          });
-        }
-      }
-
-      const bytes = yield* Effect.promise(() => pdf.save());
-      const output = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
-
-      yield* downloadBlob(output, getDownloadFilename(options.projectName, "pdf"));
-    });
-
-    return { downloadPhotoZip, downloadPDF };
+    return { downloadPhotoZip, renderImageForRect, renderPageCanvas };
   }),
 }) {
-  static readonly layer = Layer.effect(DownloadService, DownloadService.make).pipe(
+  static readonly layer = Layer.effect(ImageExportService, ImageExportService.make).pipe(
     Layer.provide(WebGraphicsService.layer),
   );
 }
