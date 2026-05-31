@@ -56,6 +56,8 @@ import {
   selectProject,
 } from "./state";
 import { Fonts } from "./components/Fonts";
+import { runtime } from "./runtime";
+import { DownloadService } from "./services/DownloadService";
 
 function toPercent(value: number, total: number) {
   return (value / total) * 100 + "%";
@@ -422,13 +424,16 @@ function DownloadControls() {
         disabled={downloading()}
         onClick={action(function* () {
           setDownloading(true);
-          const { downloadPhotosFromCurrentLayout } = yield import("./download/photos");
-          yield downloadPhotosFromCurrentLayout({
-            bins: [...bins],
-            paper: paper(),
-            images: [...snapshot(projectImages)],
-            projectName: project().name,
-          });
+          yield runtime.runPromise(
+            DownloadService.use((service) =>
+              service.downloadPhotoZip({
+                bins: [...bins],
+                paper: paper(),
+                images: [...snapshot(projectImages)],
+                projectName: project().name,
+              }),
+            ),
+          );
         })}
       >
         Download Photos
@@ -438,13 +443,16 @@ function DownloadControls() {
         disabled={downloading()}
         onClick={action(function* () {
           setDownloading(true);
-          const { downloadPdfFromCurrentLayout } = yield import("./download/pdf");
-          yield downloadPdfFromCurrentLayout({
-            bins: [...bins],
-            paper: paper(),
-            images: [...snapshot(projectImages)],
-            projectName: project().name,
-          });
+          yield runtime.runPromise(
+            DownloadService.use((service) =>
+              service.downloadPDF({
+                bins: [...bins],
+                paper: paper(),
+                images: [...snapshot(projectImages)],
+                projectName: project().name,
+              }),
+            ),
+          );
         })}
       >
         Download PDF

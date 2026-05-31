@@ -21,6 +21,30 @@ export class OptimizeImageBlobError extends Schema.TaggedErrorClass<OptimizeImag
   {},
 ) {}
 
+export class DownloadMissingImageError extends Schema.TaggedErrorClass<DownloadMissingImageError>()(
+  "DownloadMissingImageError",
+  {
+    imageId: Schema.String,
+  },
+) {}
+
+export class DownloadImageBitmapError extends Schema.TaggedErrorClass<DownloadImageBitmapError>()(
+  "DownloadImageBitmapError",
+  {
+    cause: Schema.Defect,
+  },
+) {}
+
+export class DownloadCanvasContextError extends Schema.TaggedErrorClass<DownloadCanvasContextError>()(
+  "DownloadCanvasContextError",
+  {},
+) {}
+
+export class DownloadCanvasEncodeError extends Schema.TaggedErrorClass<DownloadCanvasEncodeError>()(
+  "DownloadCanvasEncodeError",
+  {},
+) {}
+
 export const CropCoordinatesSchema: Schema.Codec<CropCoordinates> = Schema.Struct({
   x: Schema.Number,
   y: Schema.Number,
