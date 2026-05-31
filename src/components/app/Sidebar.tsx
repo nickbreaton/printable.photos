@@ -152,8 +152,6 @@ export function Sidebar() {
               }
               yield addImages(files);
 
-              // Hold until fully refreshed so UI doesnt tear resetting DOM directly
-              // yield resolve(() => Object.keys(bins));
               event.target.value = "";
             })}
           >
