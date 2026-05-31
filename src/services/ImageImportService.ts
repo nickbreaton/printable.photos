@@ -45,7 +45,8 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
       const optimizedBlob = yield* imageOptimizationService
         .optimize(bitmap)
         .pipe(Effect.mapError((cause) => new ImageImportError({ fileName: options.file.name, cause })));
-
+      const width = bitmap.width;
+      const height = bitmap.height;
       const createdAt = yield* DateTime.now;
       const imageId = yield* randomUUID();
 
@@ -56,8 +57,8 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
           order: options.order,
           name: options.file.name,
           type: options.file.type,
-          width: bitmap.width,
-          height: bitmap.height,
+          width,
+          height,
           optimizedBlob,
           crops: {},
           createdAt,
@@ -65,7 +66,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
         },
         originalImage: { imageId, blob: options.file },
       });
-    });
+    }, Effect.scoped);
 
     const importImages = Effect.fn("ImageImportService.importImages")(function* (options: ImportImagesOptions) {
       const maxImportBytes = yield* memoryEstimationService.estimate();
@@ -93,7 +94,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
       });
 
       yield* imageRepository.addImportedImages(importedImages);
-    }, Effect.scoped);
+    });
 
     return { addImages };
   }),
