@@ -28,11 +28,10 @@ const buttonVariants = cva(
   },
 );
 
-export interface ButtonProps
-  extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "class">, VariantProps<typeof buttonVariants> {}
+export type ButtonProps = JSX.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants>;
 
 export function Button(props: ButtonProps) {
-  const buttonProps = omit(props, "activeTransform", "size", "variant");
+  const buttonProps = omit(props, "activeTransform", "class", "size", "variant");
 
   return (
     <button
@@ -41,6 +40,7 @@ export function Button(props: ButtonProps) {
         variant: props.variant,
         size: props.size,
         activeTransform: props.activeTransform,
+        class: props.class,
       })}
     />
   );
