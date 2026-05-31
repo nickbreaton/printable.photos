@@ -388,7 +388,7 @@ function HeaderProjectDropdown() {
         type="button"
         variant="secondary"
         activeTransform={false}
-        class="min-w-0 w-9 px-0"
+        size="icon"
         aria-label="Project settings"
         onClick={() => setSettingsMode("settings")}
       >
