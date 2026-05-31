@@ -2,7 +2,6 @@ import Dexie, { type EntityTable, type Transaction } from "dexie";
 import { Context, Effect, Layer } from "effect";
 
 import { createDefaultProject, type OriginalProjectImage, type Project, type StoredProjectImage } from "../data";
-import { applyMigrations } from "../migrations";
 
 export class PrintablePhotosDatabase extends Dexie {
   projects!: EntityTable<Project, "id">;
@@ -12,7 +11,26 @@ export class PrintablePhotosDatabase extends Dexie {
   constructor() {
     super("printablePhotos");
 
-    applyMigrations(this);
+    this.version(1).stores({
+      projects: "id",
+      images: "id, projectId, [projectId+order]",
+      originalImages: "imageId",
+    });
+
+    this.version(2)
+      .stores({
+        projects: "id, lastSelectedAt",
+        images: "id, projectId, [projectId+order]",
+        originalImages: "imageId",
+      })
+      .upgrade(async (transaction) => {
+        await transaction
+          .table<Project>("projects")
+          .toCollection()
+          .modify((project) => {
+            project.lastSelectedAt ??= project.createdAt;
+          });
+      });
 
     this.on("populate", (transaction) => {
       void transaction.table("projects").add(createDefaultProject());
