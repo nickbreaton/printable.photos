@@ -1,8 +1,9 @@
 import { Context, Effect, Layer } from "effect";
 
 import { computeInitialCrop, cropFromPercentages, cropToSourcePixels, getCropKey } from "../crop";
-import { database, type CropCoordinates } from "../data";
+import type { CropCoordinates } from "../data";
 import type { PackedImageBin, PackedImageRectangle } from "../layout";
+import { ImageRepository } from "../repositories/ImageRepository";
 import { ExportEncodeError, ExportMissingImageError } from "../schema";
 import { WebGraphicsService } from "./WebGraphicsService";
 
@@ -101,6 +102,7 @@ function toArrayBuffer(bytes: Uint8Array) {
 export class ImageExportService extends Context.Service<ImageExportService>()("ImageExportService", {
   make: Effect.gen(function* () {
     const webGraphicsService = yield* WebGraphicsService;
+    const imageRepository = yield* ImageRepository;
 
     const renderImageForRect = Effect.fn("ImageExportService.renderImageForRect")(function* (
       image: ExportImage,
@@ -112,7 +114,7 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
       const preRotationHeight = rect.rot ? targetWidthPx : targetHeightPx;
       const originalImage = imageMeetsExportDpi(image, rect, preRotationWidth, preRotationHeight)
         ? undefined
-        : yield* Effect.promise(() => database.originalImages.get(image.id));
+        : yield* imageRepository.getOriginalImage(image.id);
       const sourceBlob = originalImage?.blob ?? image.blob;
       const sourceBitmap = yield* webGraphicsService
         .createImageBitmap(sourceBlob)
@@ -226,5 +228,6 @@ export class ImageExportService extends Context.Service<ImageExportService>()("I
 }) {
   static readonly layer = Layer.effect(ImageExportService, ImageExportService.make).pipe(
     Layer.provide(WebGraphicsService.layer),
+    Layer.provide(ImageRepository.layer),
   );
 }

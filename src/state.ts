@@ -11,8 +11,6 @@ import {
 import { MaxRectsPacker } from "maxrects-packer";
 
 import {
-  database,
-  DEFAULT_PROJECT_SETTINGS,
   type CropCoordinates,
   type ImageSettings,
   type PaperSettings,
@@ -22,9 +20,11 @@ import {
 import type { PackedImageBin } from "./layout";
 import { runtime } from "./runtime";
 import { ImageImportService } from "./services/ImageImportService";
+import { ImageRepository } from "./repositories/ImageRepository";
+import { ProjectRepository } from "./repositories/ProjectRepository";
 
 export const projects = createProjection((): Promise<Project[]> => {
-  return Promise.resolve(database.table("projects").toArray());
+  return runtime.runPromise(ProjectRepository.use((repository) => repository.list()));
 }, []);
 
 export const projectId = createMemo(() => {
@@ -40,39 +40,23 @@ export const projectId = createMemo(() => {
 });
 
 export const selectProject = action(function* (id: string) {
-  const promisish = database.projects.update(id, {
-    lastSelectedAt: Date.now(),
-  });
-  yield Promise.resolve(promisish);
+  yield runtime.runPromise(ProjectRepository.use((repository) => repository.select(id)));
   refresh(projects);
 });
 
 export const createProject = action(function* (name: string) {
-  const id = crypto.randomUUID();
-  const timestamp = Date.now();
-
-  const promisish = database.projects.add({
-    id,
-    name,
-    settings: structuredClone(DEFAULT_PROJECT_SETTINGS),
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    lastSelectedAt: timestamp,
-  });
-  yield Promise.resolve(promisish);
+  yield runtime.runPromise(ProjectRepository.use((repository) => repository.create(name)));
 
   refresh(projects);
 });
 
 export const renameProject = action(function* (id: string, name: string) {
-  const promisish = database.projects.update(id, { name });
-  yield Promise.resolve(promisish);
+  yield runtime.runPromise(ProjectRepository.use((repository) => repository.rename(id, name)));
   refresh(projects);
 });
 
 export const deleteProject = action(function* (id: string) {
-  const promisish = database.projects.delete(id);
-  yield Promise.resolve(promisish);
+  yield runtime.runPromise(ProjectRepository.use((repository) => repository.remove(id)));
   refresh(projectImages);
   refresh(projects);
 });
@@ -86,14 +70,9 @@ export const paper = createMemo(() => {
 });
 
 export const setPaper = action(function* (newPaper: Partial<PaperSettings>) {
-  const nestedUpdateEntries = Object.entries(newPaper).map(([key, value]) => [
-    `settings.paper.${key}`,
-    value,
-  ]);
-  const promisish = database
-    .table("projects")
-    .update(projectId(), Object.fromEntries(nestedUpdateEntries));
-  yield Promise.resolve(promisish);
+  yield runtime.runPromise(
+    ProjectRepository.use((repository) => repository.updatePaperSettings(projectId(), newPaper)),
+  );
   refresh(projects);
 });
 
@@ -102,14 +81,9 @@ export const imageConfig = createMemo(() => {
 });
 
 export const setImageConfig = action(function* (newImageConfig: Partial<ImageSettings>) {
-  const nestedUpdateEntries = Object.entries(newImageConfig).map(([key, value]) => [
-    `settings.image.${key}`,
-    value,
-  ]);
-  const promisish = database
-    .table("projects")
-    .update(projectId(), Object.fromEntries(nestedUpdateEntries));
-  yield Promise.resolve(promisish);
+  yield runtime.runPromise(
+    ProjectRepository.use((repository) => repository.updateImageSettings(projectId(), newImageConfig)),
+  );
   refresh(projects);
 });
 
@@ -122,20 +96,7 @@ export const projectImages = createProjection(async (): Promise<ProjectImage[]> 
     return [];
   }
 
-  const images = await database.images.where("projectId").equals(project().id).sortBy("order");
-  const projectImages = await Promise.all(
-    images.map(async (image): Promise<ProjectImage | undefined> => {
-      const originalImage = image.optimizedBlob
-        ? undefined
-        : await database.originalImages.get(image.id);
-
-      const blob = image.optimizedBlob ?? originalImage?.blob;
-
-      return blob ? merge(image, { blob }) : undefined;
-    }),
-  );
-
-  return projectImages.filter((image): image is ProjectImage => Boolean(image));
+  return runtime.runPromise(ImageRepository.use((repository) => repository.listByProject(project().id)));
 }, []);
 
 export const images = mapArray(
@@ -166,16 +127,7 @@ export const addImages = action(function* (files: FileList) {
 });
 
 export const deleteImage = action(function* (imageId: string) {
-  const promisish = database.transaction(
-    "rw",
-    database.projects,
-    database.images,
-    database.originalImages,
-    async () => {
-      await database.images.delete(imageId);
-    },
-  );
-  yield Promise.resolve(promisish);
+  yield runtime.runPromise(ImageRepository.use((repository) => repository.deleteImage(imageId)));
   refresh(projectImages);
   refresh(projects);
 });
@@ -185,21 +137,9 @@ export const saveImageCrop = action(function* (
   cropKey: string,
   cropCoordinates: CropCoordinates,
 ) {
-  const promisish = database.transaction("rw", database.projects, database.images, async () => {
-    const image = await database.images.get(imageId);
-
-    if (!image) {
-      return;
-    }
-
-    await database.images.update(imageId, {
-      crops: {
-        ...image.crops,
-        [cropKey]: cropCoordinates,
-      },
-    });
-  });
-  yield Promise.resolve(promisish);
+  yield runtime.runPromise(
+    ImageRepository.use((repository) => repository.saveCrop(imageId, cropKey, cropCoordinates)),
+  );
   refresh(projectImages);
 });
 

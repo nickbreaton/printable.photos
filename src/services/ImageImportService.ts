@@ -1,7 +1,7 @@
 import { Context, DateTime, Effect, Layer, Schema, Semaphore } from "effect";
 
-import { database } from "../data";
-import { DatabaseWriteError, ImageImportError, ImportedImageSchema } from "../schema";
+import { ImageImportError, ImportedImageSchema } from "../schema";
+import { ImageRepository } from "../repositories/ImageRepository";
 import { MemoryEstimationService } from "./MemoryEstimationService";
 import { ImageOptimizationService } from "./ImageOptimizationService";
 import { UUIDService } from "./UUIDService";
@@ -35,6 +35,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
     const imageOptimizationService = yield* ImageOptimizationService;
     const { randomUUID } = yield* UUIDService;
     const webGraphicsService = yield* WebGraphicsService;
+    const imageRepository = yield* ImageRepository;
 
     const importImage = Effect.fn("ImageImportService.importImage")(function* (options: ImportImageOptions) {
       const bitmap = yield* webGraphicsService
@@ -91,14 +92,7 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
         nextOrder: getNextOrder(options.currentImages),
       });
 
-      yield* Effect.tryPromise({
-        try: () =>
-          database.transaction("rw", database.projects, database.images, database.originalImages, async () => {
-            await database.images.bulkAdd(importedImages.map((importedImage) => importedImage.image));
-            await database.originalImages.bulkAdd(importedImages.map((importedImage) => importedImage.originalImage));
-          }),
-        catch: (cause) => new DatabaseWriteError({ cause }),
-      });
+      yield* imageRepository.addImportedImages(importedImages);
     }, Effect.scoped);
 
     return { addImages };
@@ -109,5 +103,6 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
     Layer.provide(ImageOptimizationService.layer),
     Layer.provide(UUIDService.layer),
     Layer.provide(WebGraphicsService.layer),
+    Layer.provide(ImageRepository.layer),
   );
 }
