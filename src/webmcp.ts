@@ -23,6 +23,7 @@ import {
   project,
   projectImages,
   projects,
+  renameProject,
   selectProject,
   setImageConfig,
   setPaper,
@@ -240,6 +241,17 @@ async function switchProject(input: unknown) {
   return serializeCurrentProject();
 }
 
+async function renameCurrentProject(input: unknown) {
+  const args = requireObject(input);
+  const name = requireString(args, "name");
+  const currentProject = snapshot(project());
+
+  await renameProject(currentProject.id, name);
+  await resolve(() => project().name === name);
+
+  return serializeCurrentProject();
+}
+
 async function updateCurrentProjectSettings(input: unknown) {
   const args = requireObject(input);
   const paperUpdate: Partial<PaperSettings> = {};
@@ -440,6 +452,20 @@ function getTools(): WebMcpTool[] {
         additionalProperties: false,
       },
       execute: switchProject,
+    },
+    {
+      name: "rename_project",
+      title: "Rename current printable.photos project",
+      description: "Rename the currently selected printable.photos project. Project IDs are not accepted.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "New name for the current project." },
+        },
+        required: ["name"],
+        additionalProperties: false,
+      },
+      execute: renameCurrentProject,
     },
     {
       name: "get_current_project",
