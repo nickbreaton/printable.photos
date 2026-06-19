@@ -9,11 +9,13 @@ import { DownloadControls } from "./components/app/DownloadControls";
 import { HeaderProjectDropdown } from "./components/app/HeaderProjectDropdown";
 import { Pages } from "./components/app/Pages";
 import { Sidebar } from "./components/app/Sidebar";
+import { WebMcpTools } from "./webmcp";
 
 function App() {
   return (
     <Loading>
       <Fonts />
+      <WebMcpTools />
       <header class="px-5 py-3 grid grid-cols-subgrid col-span-2">
         <span class="font-semibold tracking-tight text-lg flex gap-2 items-center">
           <Icon icon={FileSpreadsheet} class="scale-150" />

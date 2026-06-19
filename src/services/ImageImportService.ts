@@ -18,13 +18,13 @@ interface ImportImageOptions {
 }
 
 interface ImportImagesOptions {
-  files: File[];
+  files: readonly File[];
   projectId: string;
   nextOrder: number;
 }
 
 interface AddImagesOptions {
-  files: FileList;
+  files: Iterable<File> | ArrayLike<File>;
   projectId: string;
   currentImages: readonly { order: number }[];
 }
@@ -94,6 +94,8 @@ export class ImageImportService extends Context.Service<ImageImportService>()("I
       });
 
       yield* imageRepository.addImportedImages(importedImages);
+
+      return importedImages.map((importedImage) => importedImage.image);
     });
 
     return { addImages };

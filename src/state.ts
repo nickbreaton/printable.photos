@@ -16,6 +16,7 @@ import {
   type PaperSettings,
   type Project,
   type ProjectImage,
+  type StoredProjectImage,
 } from "./data";
 import type { PackedImageBin } from "./layout";
 import { runtime } from "./runtime";
@@ -112,8 +113,8 @@ export const images = mapArray(
   { keyed: (image) => image.id },
 );
 
-export const addImages = action(function* (files: FileList) {
-  yield runtime.runPromise(
+function importImages(files: FileList | readonly File[]): Promise<StoredProjectImage[]> {
+  return runtime.runPromise(
     ImageImportService.use((service) =>
       service.addImages({
         files,
@@ -122,8 +123,22 @@ export const addImages = action(function* (files: FileList) {
       }),
     ),
   );
+}
+
+export const addImageFiles = action(function* (files: readonly File[]) {
+  const importedImages = yield importImages(files);
   refresh(projectImages);
   refresh(projects);
+
+  return importedImages;
+});
+
+export const addImages = action(function* (files: FileList) {
+  const importedImages = yield importImages(files);
+  refresh(projectImages);
+  refresh(projects);
+
+  return importedImages;
 });
 
 export const deleteImage = action(function* (imageId: string) {
