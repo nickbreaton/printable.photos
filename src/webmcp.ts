@@ -328,7 +328,7 @@ function withExtension(name: string, type: string): string {
 async function downloadImageSource(source: string): Promise<{ blob: Blob; type: string; fallbackName: string }> {
   if (source.startsWith("data:")) {
     if (!/^data:image\/[a-z0-9.+-]+;base64,/i.test(source)) {
-      throw new Error("Base64 uploads must be image data URLs, such as data:image/png;base64,...");
+      throw new Error("Base64 image data URLs are accepted when needed, such as data:image/png;base64,...");
     }
 
     const response = await fetch(source);
@@ -345,11 +345,11 @@ async function downloadImageSource(source: string): Promise<{ blob: Blob; type: 
   try {
     url = new URL(source);
   } catch {
-    throw new Error("Image source must be an absolute http(s) URL or a base64 image data URL.");
+    throw new Error("Image source must be a hosted or local server http(s) URL. Base64 image data URLs are also accepted when needed.");
   }
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("External image URLs must use http or https.");
+    throw new Error("Image URLs must use http or https. Hosted URLs and local server URLs are preferred.");
   }
 
   let response: Response;
@@ -378,21 +378,32 @@ async function downloadImageSource(source: string): Promise<{ blob: Blob; type: 
   return { blob, type: contentType, fallbackName };
 }
 
-async function uploadImage(input: unknown) {
+async function uploadImages(input: unknown) {
   const args = requireObject(input);
-  const source = requireString(args, "source");
-  const requestedName = optionalString(args, "name");
-  const { blob, fallbackName, type } = await downloadImageSource(source);
-  const fileName = withExtension(safeFileName(requestedName, fallbackName), type);
-  const file = new File([blob], fileName, { type });
-  const importedImages = (await addImageFiles([file])) as StoredProjectImage[];
-  const importedImage = importedImages[0];
+  const images = args.images;
 
-  await resolve(() => projectImages.find((image) => image.id === importedImage.id));
+  if (!Array.isArray(images) || images.length === 0) {
+    throw new Error("“images” must be a non-empty array.");
+  }
+
+  const files = await Promise.all(
+    images.map(async (imageInput, index) => {
+      const image = requireObject(imageInput);
+      const source = requireString(image, "source");
+      const requestedName = optionalString(image, "name");
+      const { blob, fallbackName, type } = await downloadImageSource(source);
+      const fileName = withExtension(safeFileName(requestedName, fallbackName), type);
+
+      return new File([blob], fileName, { type, lastModified: Date.now() + index });
+    }),
+  );
+
+  const importedImages = (await addImageFiles(files)) as StoredProjectImage[];
+  await resolve(() => importedImages.every((importedImage) => projectImages.some((image) => image.id === importedImage.id)));
 
   return {
     project: serializeCurrentProject().project.name,
-    image: serializeImage(importedImage),
+    images: importedImages.map(serializeImage),
   };
 }
 
@@ -509,29 +520,41 @@ function getTools(): WebMcpTool[] {
       execute: updateCurrentProjectSettings,
     },
     {
-      name: "upload_image",
-      title: "Upload image to current printable.photos project",
-      description: `Upload one image into the currently selected project. The source can be a base64 image data URL or an external http(s) URL. For external URLs, the server should allow cross-origin reads from ${location.origin} with CORS headers, otherwise the image cannot be read by this page.`,
+      name: "upload_images",
+      title: "Upload images to current printable.photos project",
+      description: `Upload one or more images into the currently selected project. Prefer hosted URLs or local server http(s) URLs for each source. Base64 image data URLs are accepted when needed. For URLs served by another origin, servers should allow cross-origin reads from ${location.origin} with CORS headers, otherwise the images cannot be read by this page.`,
       inputSchema: {
         type: "object",
         properties: {
-          source: {
-            type: "string",
-            description:
-              "A base64 image data URL, or an absolute http(s) URL for an image that permits CORS reads from this page.",
+          images: {
+            type: "array",
+            minItems: 1,
+            description: "Images to upload into the current project.",
+            items: {
+              type: "object",
+              properties: {
+                source: {
+                  type: "string",
+                  description:
+                    "Prefer a hosted or local server http(s) URL for an image that permits CORS reads from this page. Base64 image data URLs are accepted when needed.",
+                },
+                name: { type: "string", description: "Optional file name to use in the project." },
+              },
+              required: ["source"],
+              additionalProperties: false,
+            },
           },
-          name: { type: "string", description: "Optional file name to use in the project." },
         },
-        required: ["source"],
+        required: ["images"],
         additionalProperties: false,
       },
-      execute: uploadImage,
+      execute: uploadImages,
     },
     {
       name: "delete_image",
       title: "Delete image from current printable.photos project",
       description:
-        "Delete an image from the currently selected project by imageId as returned by get_current_project or upload_image. Images outside the current project are not affected.",
+        "Delete an image from the currently selected project by imageId as returned by get_current_project or upload_images. Images outside the current project are not affected.",
       inputSchema: {
         type: "object",
         properties: {
