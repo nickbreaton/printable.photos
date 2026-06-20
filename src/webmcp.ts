@@ -345,7 +345,9 @@ async function downloadImageSource(source: string): Promise<{ blob: Blob; type: 
   try {
     url = new URL(source);
   } catch {
-    throw new Error("Image source must be a hosted or local server http(s) URL. Base64 image data URLs are also accepted when needed.");
+    throw new Error(
+      "Image URL must be a hosted or local server http(s) URL. Base64 image data URLs are also accepted when needed.",
+    );
   }
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
@@ -389,7 +391,7 @@ async function uploadImages(input: unknown) {
   const files = await Promise.all(
     images.map(async (imageInput, index) => {
       const image = requireObject(imageInput);
-      const source = requireString(image, "source");
+      const source = requireString(image, "url");
       const requestedName = optionalString(image, "name");
       const { blob, fallbackName, type } = await downloadImageSource(source);
       const fileName = withExtension(safeFileName(requestedName, fallbackName), type);
@@ -399,7 +401,9 @@ async function uploadImages(input: unknown) {
   );
 
   const importedImages = (await addImageFiles(files)) as StoredProjectImage[];
-  await resolve(() => importedImages.every((importedImage) => projectImages.some((image) => image.id === importedImage.id)));
+  await resolve(() =>
+    importedImages.every((importedImage) => projectImages.some((image) => image.id === importedImage.id)),
+  );
 
   return {
     project: serializeCurrentProject().project.name,
@@ -522,7 +526,7 @@ function getTools(): WebMcpTool[] {
     {
       name: "upload_images",
       title: "Upload images to current printable.photos project",
-      description: `Upload one or more images into the currently selected project. Prefer hosted URLs or local server http(s) URLs for each source. Base64 image data URLs are accepted when needed. For URLs served by another origin, servers should allow cross-origin reads from ${location.origin} with CORS headers, otherwise the images cannot be read by this page.`,
+      description: `Upload one or more images into the currently selected project. Prefer hosted URLs or local server http(s) URLs for each image. Base64 image data URLs are accepted when needed. For URLs served by another origin, servers should allow cross-origin reads from ${location.origin} with CORS headers, otherwise the images cannot be read by this page.`,
       inputSchema: {
         type: "object",
         properties: {
@@ -533,14 +537,14 @@ function getTools(): WebMcpTool[] {
             items: {
               type: "object",
               properties: {
-                source: {
+                url: {
                   type: "string",
                   description:
                     "Prefer a hosted or local server http(s) URL for an image that permits CORS reads from this page. Base64 image data URLs are accepted when needed.",
                 },
                 name: { type: "string", description: "Optional file name to use in the project." },
               },
-              required: ["source"],
+              required: ["url"],
               additionalProperties: false,
             },
           },
